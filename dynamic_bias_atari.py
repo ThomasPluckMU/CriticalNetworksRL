@@ -15,7 +15,7 @@ import time
 gym.register_envs(ale_py)
 
 # Hyperparameters
-BATCH_SIZE = 128
+BATCH_SIZE = 32
 GAMMA = 0.99
 EPS_START = 1.0
 EPS_END = 0.1
