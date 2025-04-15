@@ -1,90 +1,76 @@
-# Dynamic Bias Atari RL Agent
+# Critical Networks RL Framework [![codecov](https://codecov.io/gh/CriticalNetworksRL/CriticalNetworksRL/branch/main/graph/badge.svg)](https://codecov.io/gh/CriticalNetworksRL/CriticalNetworksRL)
 
-A reinforcement learning agent that can train on multiple Atari games using a unified action space with dynamic bias layers.
-
-## Features
-
-- Unified action space for multiple Atari games  
-- Dynamic bias layers for game-specific adaptation
-- Two training modes:
-- Optional no-target-model mode for direct policy learning
-  - Multi-game training with automatic game switching
-  - Single-game focused training
-- Checkpoint saving and resuming
-- Rendering controls during training
-
-## Requirements
-
-- Python 3.8+
-- PyTorch
-- Gymnasium
-- ALE-py
-- Matplotlib
+A reinforcement learning framework for training dynamic agents on Atari games.
 
 ## Installation
 
+1. Clone the repository:
+```bash
+git clone https://github.com/CriticalNetworksRL/CriticalNetworksRL.git
+cd CriticalNetworksRL
+```
+
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-### Training Modes
+The main training script is `scripts/train_atari.py`. Basic commands:
 
-1. **Multi-game training** (cycles through available games):
+### Multi-game training
 ```bash
-python dynamic_bias_atari.py --mode multi
+python scripts/train_atari.py --multi \
+  --agent GatedAtariUDQN \
+  --logic criticalnets.training.logic.multi_game.MultiGameLogic \
+  --episodes 5000 \
+  --render
 ```
 
-2. **Single-game training**:
+### Single-game training
 ```bash
-python dynamic_bias_atari.py --mode single --game "ALE/DemonAttack-v5"
+python scripts/train_atari.py --single "ALE/Pong-v5" \
+  --agent GatedAtariUDQN \
+  --logic criticalnets.training.logic.base.TrainingLogic \
+  --episodes 1000 \
+  --save-dir my_checkpoints
 ```
 
-### Checkpoint Options
-
-- Resume training from checkpoint:
-```bash
-python dynamic_bias_atari.py --mode single --game "ALE/DemonAttack-v5" --checkpoint model_checkpoints/ALE_DemonAttack-v5_single_100.pt
+Full options:
+```
+--multi              Train across multiple Atari games
+--single <game>      Train on specific Atari game
+--episodes <count>   Number of episodes [default: 1000]
+--render             Enable rendering
+--checkpoint <path>  Load existing checkpoint
+--save-dir <path>    Model save directory [default: model_checkpoints]
+--lr <rate>          Learning rate [default: 0.001]
+--memory-size <size> Replay memory size [default: 100000]
+--agent <name>       Agent class name [required]
+--logic <path>       Training logic class path [required]
 ```
 
-- Force loading mismatched checkpoint:
-```bash
-python dynamic_bias_atari.py --mode single --game "ALE/DemonAttack-v5" --checkpoint old_checkpoint.pt --ignore_shape_mismatch
-```
+## Project Structure
 
-### Runtime Controls
+### Core Modules
 
-During training:
-- `+` Increase render delay (slower)
-- `-` Decrease render delay (faster) 
-- `0` Reset to default delay
-- `f` Toggle super fast mode (no delay)
+1. [Agents](criticalnets/agents/README.md) - RL agent implementations
+2. [Layers](criticalnets/layers/README.md) - Custom neural network layers
+3. [Training](criticalnets/training/README.md) - Training infrastructure
+   - [Training Logic](criticalnets/training/logic/README.md) - Training strategies
+4. [Environments](criticalnets/environments/README.md) - Atari game management
+5. [Utils](criticalnets/utils/README.md) - Helper functions and classes
 
-## File Structure
+### Scripts
 
-- `dynamic_bias_atari.py`: Main training script
-- `dynamic_bias_layers.py`: Dynamic bias layer implementation
-- `model_checkpoints/`: Saved model weights
-- `requirements.txt`: Python dependencies
+- `train_atari.py`: Main training script
+- Other utility scripts in `scripts/` directory
 
-## Training Options
+## Getting Started
 
-- `--episodes`: Set number of training episodes (default: 1000)
-- `--checkpoint`: Path to checkpoint file to resume training  
-- `--ignore_shape_mismatch`: Allow loading checkpoints with different network architecture
-- `--layer-type`: Choose dynamic bias layer variant (gated/deadweight, default: gated)
-- `--reward-mode`: Select reward calculation (instant/discounted, default: discounted)
-- `--no-target-model`: Bypass target network and feed rewards directly to policy network
+1. Choose an agent from the [agents module](criticalnets/agents/README.md)
+2. Select a training strategy from [training logic](criticalnets/training/logic/README.md)
+3. Run training with your preferred configuration
 
-## Layer Variants
-- `gated`: Uses gating mechanism for dynamic bias
-- `deadweight`: Uses dead weight pruning approach
-
-## Reward Modes  
-- `instant`: Uses immediate rewards only (γ=0)
-- `discounted`: Standard temporal difference (γ=0.99)
-
-## Monitoring
-
-Training progress is saved as PNG plots every 10 episodes (multi-game) or 100 episodes (single-game).
+See individual module READMEs for detailed documentation on extending the framework.

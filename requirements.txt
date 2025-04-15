@@ -1,7 +1,15 @@
-ale-py
-torch
-torchvision
-numpy
-matplotlib
-tqdm
-gymnasium
+# Core dependencies
+torch>=2.0.0
+gymnasium[atari]>=0.28.1
+ale-py>=0.8.1
+numpy>=1.21.0
+matplotlib>=3.5.0
+keyboard>=0.13.5  # Cross-platform keyboard controls
+
+# Windows-specific dependencies
+msvc-runtime>=14.0 ; sys_platform == 'win32'
+
+# Development/testing dependencies
+coverage>=6.5.0
+pytest-cov>=4.0.0
+pytest>=7.0.0
