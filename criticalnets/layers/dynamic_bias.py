@@ -42,6 +42,6 @@ class DynamicBiasNN(DynamicBiasBase):
         a = torch.matmul(x, self.weight.t())
         z = a + self.current_bias
         activation = self.selu(z)
-        self.current_bias -= self.velocity * (activation + 0.1)
+        self.current_bias -= self.velocity * activation
         
         return activation

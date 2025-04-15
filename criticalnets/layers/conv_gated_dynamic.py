@@ -67,12 +67,12 @@ class GatedDynamicBiasCNN(nn.Module):
         )
         
         # Initialize current bias maps
-        self.current_bias_maps = self.base.expand(batch_size, -1, -1, -1).clone()
+        self.current_bias_maps = self.base.expand(batch_size, -1, -1, -1).data.clone()
                 
     def reset_bias(self):
         """Reset current bias maps to base values"""
         if self.base is not None and self.out_height is not None:
-            self.current_bias_maps = self.base.expand(self.batch_size, -1, -1, -1).clone()
+            self.current_bias_maps = self.base.expand(self.batch_size, -1, -1, -1).data.clone()
         else:
             self.current_bias_maps = None
     

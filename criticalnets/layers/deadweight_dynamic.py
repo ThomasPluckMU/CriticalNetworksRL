@@ -43,8 +43,6 @@ class DeadWeightDynamicBiasNN(DynamicBiasBase):
         
         if self.current_bias is None:
             self.current_bias = self._init_bias(batch_size)
-            # Add small random noise to ensure unique initialization
-            self.current_bias += torch.randn_like(self.current_bias) * 0.01
         
         velocity = self.gelu(torch.matmul(x, self.velocity_weight) + self.velocity_bias)
         a = torch.matmul(x, self.weight.t())
@@ -52,7 +50,7 @@ class DeadWeightDynamicBiasNN(DynamicBiasBase):
         activation = self.selu(z)
         
         # Update bias with stronger velocity effect
-        self.current_bias = self.current_bias - velocity * activation * 1.0
+        self.current_bias = self.current_bias - velocity * activation
         
         return activation
 
@@ -61,4 +59,3 @@ class DeadWeightDynamicBiasNN(DynamicBiasBase):
         if hasattr(self, 'current_bias') and self.current_bias is not None:
             batch_size = self.current_bias.shape[0]
             self.current_bias = self._init_bias(batch_size)
-            self.current_bias += torch.randn_like(self.current_bias) * 0.01

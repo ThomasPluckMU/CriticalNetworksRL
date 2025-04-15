@@ -140,8 +140,6 @@ class DeadWeightDynamicBiasCNN(nn.Module):
         # Initialize bias maps if needed
         if self.current_bias_maps is None:
             self._initialize_parameters(conv_output.shape)
-            # Add small random noise to ensure unique initialization
-            self.current_bias_maps += torch.randn_like(self.current_bias_maps) * 0.01
             
         # Add bias maps to convolution output
         z = conv_output + self.current_bias_maps

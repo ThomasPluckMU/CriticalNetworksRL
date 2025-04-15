@@ -48,6 +48,6 @@ class DynamicBiasCNN(nn.Module):
         z = conv_output + self.current_bias_maps
         activation = self.selu(z)
         velocity_expanded = self.velocity.unsqueeze(0).expand_as(activation)
-        self.current_bias_maps -= velocity_expanded * (activation + 0.1)
+        self.current_bias_maps -= velocity_expanded * activation
         
         return activation
