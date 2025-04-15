@@ -8,9 +8,32 @@ class AtariManager:
     """Handles Atari environment setup and verification"""
     
     RELIABLE_GAMES = [
-        "Pong",
-        "Breakout",
-        # ... (keep original game list)
+     "ALE/Pong-v5",
+     "ALE/Breakout-v5", 
+     "ALE/SpaceInvaders-v5",
+     "ALE/MsPacman-v5", 
+     "ALE/Asterix-v5",
+     "ALE/Boxing-v5",
+     "ALE/Freeway-v5", 
+     "ALE/Seaquest-v5",
+     "ALE/Assault-v5",
+     "ALE/BeamRider-v5",
+     "ALE/Centipede-v5",
+     "ALE/DemonAttack-v5",
+     "ALE/Enduro-v5",
+     "ALE/Phoenix-v5",
+     "ALE/Qbert-v5",
+     "ALE/Riverraid-v5",
+     "ALE/RoadRunner-v5",
+     "ALE/Solaris-v5",
+     "ALE/TimePilot-v5",
+     "ALE/Tutankham-v5",
+     "ALE/UpNDown-v5",
+     "ALE/Venture-v5",
+     "ALE/VideoPinball-v5",
+     "ALE/WizardOfWor-v5",
+     "ALE/YarsRevenge-v5",
+     "ALE/Zaxxon-v5"
     ]
 
     def __init__(self):

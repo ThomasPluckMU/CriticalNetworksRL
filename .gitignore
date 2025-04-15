@@ -6,3 +6,13 @@
 .coverage
 .coveragerc
 **/criticalnets.egg-info
+
+# LaTeX guff
+
+*.aux
+*.bbl
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
