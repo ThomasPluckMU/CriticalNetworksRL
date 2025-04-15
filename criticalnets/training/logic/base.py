@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import torch.optim as optim
-from typing import Any, Tuple, Dict
+from typing import Any, Tuple, Dict, Optional
 
 class TrainingLogic(ABC):
     """Abstract base class for swappable training episode logic"""
@@ -24,12 +24,34 @@ class TrainingLogic(ABC):
         """
         pass
 
-    def configure_optimizer(self, network):
-        """Default optimizer configuration"""
+    def configure_optimizer(self, network) -> Optional[optim.Optimizer]:
+        """Configure optimizer for the network
+        
+        Args:
+            network: Neural network with parameters to optimize
+            
+        Returns:
+            Configured optimizer or None if no parameters
+        """
         params = list(network.parameters())
         if not params:
             return None
-        return optim.SGD(params, lr=0.001)
+        
+        self.optimizer.add_param_group(params)
+        return self.optimizer
+    
+    def step_optimizer(self, loss):
+        """Perform a single optimization step
+        
+        Args:
+            loss: Loss tensor to backpropagate
+        """
+        if self.optimizer is None:
+            return
+            
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
     def on_checkpoint(self, episode: int):
         """Callback for checkpoint events"""
