@@ -13,10 +13,10 @@ class DynamicBiasCNN(nn.Module):
         
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, 
                              stride=stride, padding=padding, bias=False)
-        self.bias = nn.Parameter(torch.Tensor(out_channels, 1, 1))
+        self.bias = nn.Parameter(torch.zeros(out_channels, 1, 1), requires_grad=False)
         self.velocity = nn.Parameter(torch.Tensor(out_channels, 1, 1).fill_(velocity_init))
         self.bias_decay = bias_decay
-        self.selu = nn.SELU()
+        self.tanh = nn.Tanh()
         
         # Initialize weights using Kaiming initialization
         nn.init.kaiming_uniform_(self.conv.weight, a=math.sqrt(5))
@@ -36,9 +36,8 @@ class DynamicBiasCNN(nn.Module):
         
         # Apply the bias adjustment as in the NN implementation
         z = a - velocity_expanded * a
-        activation = self.selu(z)
-        print(activation.shape, velocity_expanded.shape)
-        print(self.bias.shape)
+        activation = self.tanh(z)
+
         # Update bias in-place with no_grad to prevent tracking in backward pass
         with torch.no_grad():
             bias_update = velocity_expanded * activation
@@ -153,7 +152,7 @@ def debug_gradients():
         conv_output = model_debug.conv(x_debug)
         velocity_expanded = model_debug.velocity.expand(-1, conv_output.size(2), conv_output.size(3))
         z = conv_output - velocity_expanded * conv_output
-        activation = model_debug.selu(z)
+        activation = model_debug.tanh(z)
         simple_loss = activation.mean()
         simple_loss.backward()
         

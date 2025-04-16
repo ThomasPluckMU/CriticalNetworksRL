@@ -40,11 +40,10 @@ class GatedDynamicBiasCNN(DynamicBiasCNN):
         a = self.conv(x) + self.bias
         velocity = self.sigmoid(self.velocity_conv(x))
         z = a - velocity * a
-        activation = self.selu(z)
+        activation = self.tanh(z)
         with torch.no_grad():
             bias_update = velocity * activation
             self.bias.data = self.bias.data - bias_update
-        
         return activation
 
 # Setup debug environment
