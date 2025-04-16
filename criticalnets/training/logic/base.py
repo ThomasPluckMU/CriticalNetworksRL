@@ -61,7 +61,7 @@ class TrainingLogic(ABC):
                     total_norm += param_norm ** 2
         
         total_norm = total_norm ** 0.5
-        print(f" Total gradient norm: {total_norm}, Loss: {loss}")
+        # print(f" Total gradient norm: {total_norm}, Loss: {loss}")
 
 
     def on_checkpoint(self, episode: int):

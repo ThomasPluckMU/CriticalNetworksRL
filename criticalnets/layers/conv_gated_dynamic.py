@@ -1,20 +1,13 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
+import math
 from torch.autograd import grad
 
-# Import your GatedDynamicBiasCNN class or define it here
-# from your_module import GatedDynamicBiasCNN
+# Import the parent class (assuming it's in the same module)
+from criticalnets.layers import DynamicBiasCNN
 
-# Define the class for debugging
-import math
-
-import torch
-import torch.nn as nn
-import math
-
-class GatedDynamicBiasCNN(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, ema_factor=0.9):
+class GatedDynamicBiasCNN(DynamicBiasCNN):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, velocity_init=0.1, bias_decay=1.0):
         """
         Initialize the Gated Dynamic Bias Convolutional Neural Network
         
@@ -24,106 +17,35 @@ class GatedDynamicBiasCNN(nn.Module):
             kernel_size (int or tuple): Size of the convolutional kernel
             stride (int or tuple): Stride of the convolution (default: 1)
             padding (int or tuple): Padding added to all sides of the input (default: 0)
+            velocity_init (float): Initial velocity value (default: 0.1)
+            bias_decay (float): Bias decay factor (default: 1.0)
         """
-        super(GatedDynamicBiasCNN, self).__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
-        self.stride = stride if isinstance(stride, tuple) else (stride, stride)
-        self.padding = padding if isinstance(padding, tuple) else (padding, padding)
+        super().__init__(in_channels, out_channels, kernel_size, stride, padding, velocity_init, bias_decay)
         
-        # Main convolution layer without bias (we'll handle bias separately)
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, 
-                             stride=stride, padding=padding, bias=False)
+        # Remove the constant velocity parameter from parent class
+        self.register_parameter('velocity', None)
         
-        # Velocity computation convolution layer
+        # Add velocity computation convolution layer
         self.velocity_conv = nn.Conv2d(in_channels, out_channels, kernel_size,
-                                     stride=stride, padding=padding, bias=False)
+                                     stride=stride, padding=padding, bias=True)
         
-        # Initialize weights
-        nn.init.kaiming_uniform_(self.conv.weight, a=math.sqrt(5)/2)
-        nn.init.kaiming_uniform_(self.velocity_conv.weight, a=math.sqrt(5)/2)
-        
-        # Output shape tracking
-        self.out_height = None
-        self.out_width = None
-        self.batch_size = None
-        
-        # Initialize learnable parameters
-        # These will be properly initialized during the first forward pass
-        self.base = None
-        self.current_bias_maps = None
-        
-        # Activation functions
-        self.selu = nn.SELU()
-        self.gelu = nn.Sigmoid()
-        
-    def _initialize_parameters(self, x):
-        """Initialize parameters based on input and output shape"""
-        # Calculate output dimensions
-        batch_size, _, h_in, w_in = x.shape
-        h_out = ((h_in + 2 * self.padding[0] - self.kernel_size[0]) // self.stride[0]) + 1
-        w_out = ((w_in + 2 * self.padding[1] - self.kernel_size[1]) // self.stride[1]) + 1
-        
-        # Store output dimensions
-        self.batch_size = batch_size
-        self.out_height = h_out
-        self.out_width = w_out
-        
-        # Create learnable base parameter
-        self.base = nn.Parameter(
-            nn.init.normal_(torch.zeros(1, self.out_channels, self.out_height, self.out_width))
-        )
-        
-        # Initialize current bias maps
-        self.current_bias_maps = self.base.expand(batch_size, -1, -1, -1).detach().clone()
-                
-    def reset_bias(self):
-        """Reset current bias maps to base values"""
-        if self.base is not None and self.out_height is not None:
-            self.current_bias_maps = self.base.expand(self.batch_size, -1, -1, -1).detach().clone()
-        else:
-            self.current_bias_maps = None
+        # Initialize velocity_conv weights
+        nn.init.kaiming_uniform_(self.velocity_conv.weight, a=math.sqrt(5))
+        self.sigmoid = nn.Sigmoid()
     
     def forward(self, x):
-        """
-        Forward pass with spatially-aware gated dynamic bias update
-        
-        Args:
-            x: Input tensor of shape (batch_size, in_channels, height, width)
-            
-        Returns:
-            activation: Output after activation with dynamic bias
-        """
         batch_size = x.shape[0]
         
-        # Initialize parameters if not done already or if batch size changed
-        if self.base is None or self.current_bias_maps is None or batch_size != self.batch_size:
-            self._initialize_parameters(x)
-        elif batch_size != self.current_bias_maps.size(0):
-            # Handle batch size changes by expanding the current bias maps
-            self.batch_size = batch_size
-            self.current_bias_maps = self.current_bias_maps.detach().clone().expand(batch_size, -1, -1, -1)
+        # Convolutional layer output
+        a = self.conv(x)
+        velocity = self.sigmoid(self.velocity_conv(x))
+        z = a - velocity * a
+        activation = self.selu(z)
+        with torch.no_grad():
+            bias_update = velocity * activation.mean(dim=0, keepdim=True)
+            self.bias.data = self.bias.data - bias_update.squeeze(0)
         
-        # Compute dynamic velocity using Sigmoid-gated computation
-        velocity = self.gelu(self.velocity_conv(x))
-        
-        # Apply main convolution (without bias)
-        conv_output = self.conv(x)
-        
-        # Calculate dynamic bias - CRITICAL CHANGE: keep the gradient connection
-        dynamic_bias = self.current_bias_maps * (1 - velocity) - velocity * self.selu(conv_output + self.base)
-        
-        # Final output with gradient flow to base
-        final_output = self.selu(conv_output + self.base + dynamic_bias)
-        
-        # Update the current bias maps for the next iteration
-        self.current_bias_maps = dynamic_bias.detach().clone()
-        
-        if self.kernel_size == (8,8):
-            print(f"\r{self._get_name()}: Velocity: {torch.norm(velocity).item():.4f}, Activation: {torch.norm(final_output).item():.4f}, Biases: {torch.norm(dynamic_bias).item():.4f}, Bases: {torch.norm(self.base).item()}", end="")
-        
-        return final_output
+        return activation
 
 # Setup debug environment
 def debug_gradients():
@@ -140,26 +62,31 @@ def debug_gradients():
     model.train()
     
     # Register hooks to track gradients
-    base_grads = []
-    def hook_fn(grad):
-        base_grads.append(grad.clone().detach())
+    velocity_conv_grads = []
+    bias_grads = []
+    
+    def velocity_hook(grad):
+        velocity_conv_grads.append(grad.clone().detach())
+    
+    def bias_hook(grad):
+        bias_grads.append(grad.clone().detach())
+    
+    # Register gradient hooks
+    model.velocity_conv.weight.register_hook(velocity_hook)
+    model.bias.register_hook(bias_hook)
     
     # Forward pass
     output = model(x)
     
     # Print model state before backward
-    print(f"Base parameter exists: {model.base is not None}")
-    print(f"Base requires grad: {model.base.requires_grad}")
-    print(f"Base shape: {model.base.shape}")
-    print(f"Current bias maps shape: {model.current_bias_maps.shape}")
-    
-    # Register gradient hook for base
-    if model.base is not None and model.base.requires_grad:
-        model.base.register_hook(hook_fn)
+    print(f"Velocity conv exists: {model.velocity_conv is not None}")
+    print(f"Velocity conv requires grad: {model.velocity_conv.weight.requires_grad}")
+    print(f"Velocity conv shape: {model.velocity_conv.weight.shape}")
+    print(f"Conv bias shape: {model.bias.shape}")
     
     # Create a dummy loss and backward
     loss = output.mean()
-    loss.backward()
+    loss.backward(retain_graph=True)
     
     # Check gradients
     print("\nAfter backward pass:")
@@ -172,47 +99,27 @@ def debug_gradients():
         else:
             print(f"{name} - No gradient")
     
-    # Specifically check base gradient
-    if model.base.grad is not None:
-        print(f"\nBase gradient norm: {model.base.grad.norm().item()}")
-        print(f"Sample of base gradient: {model.base.grad.flatten()[:5]}")
+    # Specifically check velocity_conv gradient
+    if model.velocity_conv.weight.grad is not None:
+        print(f"\nVelocity conv gradient norm: {model.velocity_conv.weight.grad.norm().item()}")
+        print(f"Sample of velocity conv gradient: {model.velocity_conv.weight.grad.flatten()[:5]}")
     else:
-        print("\nBase has no gradient!")
+        print("\nVelocity conv has no gradient!")
     
-    # Check captured gradients from hook
-    if base_grads:
-        print(f"\nCaptured {len(base_grads)} gradient(s) from hook")
-        for i, grad in enumerate(base_grads):
-            print(f"Hook gradient {i} norm: {grad.norm().item()}")
+    # Check captured gradients from hooks
+    if velocity_conv_grads:
+        print(f"\nCaptured {len(velocity_conv_grads)} velocity conv gradient(s) from hook")
+        for i, grad in enumerate(velocity_conv_grads):
+            print(f"Velocity conv hook gradient {i} norm: {grad.norm().item()}")
     else:
-        print("\nNo gradients captured by hook!")
+        print("\nNo velocity conv gradients captured by hook!")
     
-    # Try direct gradient computation
-    print("\nTrying direct gradient computation:")
-    try:
-        # Create a fresh model and input
-        x_fresh = torch.randn(batch_size, in_channels, height, width, requires_grad=True)
-        model_fresh = GatedDynamicBiasCNN(in_channels=in_channels, out_channels=8, kernel_size=3, padding=1)
-        
-        # Forward pass to initialize parameters
-        output_fresh = model_fresh(x_fresh)
-        
-        # We need base to be initialized
-        if model_fresh.base is not None:
-            # Try to directly compute gradient
-            direct_grad = grad(outputs=output_fresh.sum(), 
-                               inputs=model_fresh.base, 
-                               create_graph=False, 
-                               retain_graph=True)
-            
-            if direct_grad[0] is not None:
-                print(f"Direct gradient computation result: {direct_grad[0].norm().item()}")
-            else:
-                print("Direct gradient computation returned None")
-        else:
-            print("Fresh model base is None")
-    except Exception as e:
-        print(f"Error in direct gradient computation: {e}")
+    if bias_grads:
+        print(f"\nCaptured {len(bias_grads)} bias gradient(s) from hook")
+        for i, grad in enumerate(bias_grads):
+            print(f"Bias hook gradient {i} norm: {grad.norm().item()}")
+    else:
+        print("\nNo bias gradients captured by hook!")
     
     # Track computation graph and debug
     print("\nAnalyzing computational graph...")
@@ -227,10 +134,7 @@ def debug_gradients():
         # Check if output requires gradient
         print(f"Output requires grad: {output_debug.requires_grad}")
         
-        # Check where the base is used
-        # Modify forward to track this separately
-        
-        # Add a debugging hook to see data flow
+        # Add debugging hooks to see data flow
         def debug_hook(name):
             def hook(grad):
                 print(f"Gradient flow through {name}: {grad.norm().item()}")
@@ -238,67 +142,88 @@ def debug_gradients():
         
         x_debug.register_hook(debug_hook("input"))
         model_debug.conv.weight.register_hook(debug_hook("conv_weight"))
+        model_debug.velocity_conv.weight.register_hook(debug_hook("velocity_conv_weight"))
         
-        if model_debug.base is not None:
-            model_debug.base.register_hook(debug_hook("base"))
-            
-            # Try a simpler test
-            print("\nSimple test with direct base usage:")
-            # Create a simple computation directly using base
-            simple_output = model_debug.conv(x_debug) + model_debug.base.expand_as(model_debug.conv(x_debug))
-            simple_loss = simple_output.mean()
-            simple_loss.backward(retain_graph=True)
-            
-            print(f"Simple test - Base grad exists: {model_debug.base.grad is not None}")
-            if model_debug.base.grad is not None:
-                print(f"Simple test - Base grad norm: {model_debug.base.grad.norm().item()}")
+        # Try a simpler test with direct computation
+        print("\nSimple test with direct velocity_conv usage:")
+        
+        # Create a simple computation directly using velocity_conv
+        conv_output = model_debug.conv(x_debug)
+        vel_output = model_debug.sigmoid(model_debug.velocity_conv(x_debug))
+        z = conv_output - vel_output * conv_output
+        activation = model_debug.selu(z)
+        simple_loss = activation.mean()
+        simple_loss.backward()
+        
+        print(f"Simple test - Velocity conv grad exists: {model_debug.velocity_conv.weight.grad is not None}")
+        if model_debug.velocity_conv.weight.grad is not None:
+            print(f"Simple test - Velocity conv grad norm: {model_debug.velocity_conv.weight.grad.norm().item()}")
     except Exception as e:
         print(f"Error in graph analysis: {e}")
-        
-    # Detailed inspection of updated_bias calculation
-    print("\nInspecting the updated_bias calculation:")
+    
+    # Test the in-place bias update impact on gradients
+    print("\nTesting the impact of in-place bias updates:")
     try:
-        # One more fresh instance
-        x_inspect = torch.randn(batch_size, in_channels, height, width, requires_grad=True)
-        model_inspect = GatedDynamicBiasCNN(in_channels=in_channels, out_channels=8, kernel_size=3, padding=1)
+        # Create a new model and input
+        x_test = torch.randn(batch_size, in_channels, height, width, requires_grad=True)
+        model_test = GatedDynamicBiasCNN(in_channels=in_channels, out_channels=8, kernel_size=3, padding=1)
         
-        # Forward pass to initialize and to make modified computation
-        # We'll run separately for visualization
-        _ = model_inspect(x_inspect)
+        # Store original bias
+        original_bias = model_test.bias.clone()
         
-        # Now run each step with checks
-        velocity = model_inspect.sigmoid(model_inspect.velocity_conv(x_inspect))
-        conv_output = model_inspect.conv(x_inspect)
-        z = conv_output + model_inspect.current_bias_maps
-        activation = model_inspect.selu(z)
+        # Forward pass (which includes in-place bias update)
+        output_test = model_test(x_test)
         
-        # The key computation
-        print("Computing updated_bias with detailed checks:")
-        base_expanded = model_inspect.base.expand_as(activation)
-        print(f"base_expanded requires_grad: {base_expanded.requires_grad}")
+        # Verify bias was updated
+        bias_changed = not torch.allclose(original_bias, model_test.bias)
+        print(f"Bias was updated in-place: {bias_changed}")
         
-        diff = base_expanded - activation
-        print(f"diff requires_grad: {diff.requires_grad}")
+        # Test gradient flow
+        test_loss = output_test.mean()
+        test_loss.backward()
         
-        weighted_diff = velocity * diff
-        print(f"weighted_diff requires_grad: {weighted_diff.requires_grad}")
-        
-        updated_bias = weighted_diff + activation
-        print(f"updated_bias requires_grad: {updated_bias.requires_grad}")
-        
-        # Now try to compute gradient directly to this point
-        if updated_bias.requires_grad:
-            direct_grad_ub = grad(outputs=updated_bias.sum(), 
-                                inputs=model_inspect.base,
-                                create_graph=False, 
-                                retain_graph=True)
-            
-            if direct_grad_ub[0] is not None:
-                print(f"Gradient to base from updated_bias: {direct_grad_ub[0].norm().item()}")
-            else:
-                print("No gradient to base from updated_bias")
+        print(f"Gradient exists on velocity_conv despite in-place updates: {model_test.velocity_conv.weight.grad is not None}")
+        if model_test.velocity_conv.weight.grad is not None:
+            print(f"Velocity conv grad norm: {model_test.velocity_conv.weight.grad.norm().item()}")
     except Exception as e:
-        print(f"Error in updated_bias inspection: {e}")
+        print(f"Error in in-place bias update test: {e}")
+    
+    # Dissect the forward pass to examine velocity computation
+    print("\nDissecting forward pass to examine velocity computation:")
+    try:
+        # Create new model and input
+        x_dissect = torch.randn(batch_size, in_channels, height, width, requires_grad=True)
+        model_dissect = GatedDynamicBiasCNN(in_channels=in_channels, out_channels=8, kernel_size=3, padding=1)
+        
+        # Compute each step separately
+        conv_output = model_dissect.conv(x_dissect)
+        print(f"Conv output shape: {conv_output.shape}, requires_grad: {conv_output.requires_grad}")
+        
+        velocity_output = model_dissect.velocity_conv(x_dissect)
+        print(f"Raw velocity output shape: {velocity_output.shape}, requires_grad: {velocity_output.requires_grad}")
+        
+        velocity_activated = model_dissect.sigmoid(velocity_output)
+        print(f"Activated velocity shape: {velocity_activated.shape}, requires_grad: {velocity_activated.requires_grad}")
+        
+        z = conv_output - velocity_activated * conv_output
+        print(f"Z shape: {z.shape}, requires_grad: {z.requires_grad}")
+        
+        activation = model_dissect.selu(z)
+        print(f"Activation shape: {activation.shape}, requires_grad: {activation.requires_grad}")
+        
+        # Compute the bias update (but don't apply it)
+        bias_update = velocity_activated * activation.mean(dim=0, keepdim=True)
+        print(f"Bias update shape: {bias_update.shape}, requires_grad: {bias_update.requires_grad}")
+        
+        # Verify gradient flow to velocity_conv
+        dissect_loss = activation.mean()
+        dissect_loss.backward()
+        
+        print(f"Velocity conv grad exists in dissection: {model_dissect.velocity_conv.weight.grad is not None}")
+        if model_dissect.velocity_conv.weight.grad is not None:
+            print(f"Velocity conv grad norm in dissection: {model_dissect.velocity_conv.weight.grad.norm().item()}")
+    except Exception as e:
+        print(f"Error in forward pass dissection: {e}")
 
 # Run the debug function        
 if __name__ == "__main__":

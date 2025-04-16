@@ -30,7 +30,7 @@ class DiracRewardLogic(TrainingLogic):
                 q_values = agent.forward(state_tensor)
                 normalized_q = q_values/torch.norm(q_values)
                 target = reward*normalized_q.detach()  # Detach target to avoid double backprop
-                loss = self.loss_fn(normalized_q, target) * 1e5
+                loss = self.loss_fn(normalized_q, target) * 1e7
                 self.step_optimizer(loss)
     
         return total_reward, {
