@@ -1,4 +1,5 @@
 *.png
+!report/figures/*.png
 **/__pycache__/
 **/model_checkpoints/
 **/custom_checkpoints/
