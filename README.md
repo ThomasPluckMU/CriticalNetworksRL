@@ -1,5 +1,7 @@
 # Critical Networks RL Framework [![codecov](https://codecov.io/gh/CriticalNetworksRL/CriticalNetworksRL/branch/main/graph/badge.svg)](https://codecov.io/gh/CriticalNetworksRL/CriticalNetworksRL)
 
+> **Disclaimer:** The initial format of this framework were generated using DeepSeek-v3 and DeepSeek-R1 in plan/generate/debug/test loop using the Cline Autonomous Coding Agent extension.
+
 A reinforcement learning framework for training dynamic agents on Atari games.
 
 ## Installation
