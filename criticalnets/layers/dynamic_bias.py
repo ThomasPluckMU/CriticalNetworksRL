@@ -42,6 +42,76 @@ class DynamicBiasNN(DynamicBiasBase):
         a = torch.matmul(x, self.weight.t())
         z = a + self.current_bias
         activation = self.selu(z)
-        self.current_bias -= self.velocity * activation
+        # Store bias update while maintaining gradient flow to velocity
+        bias_update = self.velocity * activation
+        self.current_bias = (self.current_bias - bias_update).detach()
         
         return activation
+
+# Setup debug environment
+def debug_gradients():
+    # Create a small test input
+    batch_size = 2
+    input_size = 10
+    hidden_size = 8
+    x = torch.randn(batch_size, input_size, requires_grad=True)
+    
+    # Create the model
+    model = DynamicBiasNN(input_size, hidden_size)
+    
+    # Set model to training mode
+    model.train()
+    
+    # Register hooks to track gradients
+    velocity_grads = []
+    
+    def velocity_hook(grad):
+        velocity_grads.append(grad.clone().detach())
+    
+    # Forward pass to initialize parameters
+    output = model(x)
+    
+    # Print model state before backward
+    print(f"Velocity parameter exists: {model.velocity is not None}")
+    print(f"Velocity requires grad: {model.velocity.requires_grad}")
+    print(f"Velocity shape: {model.velocity.shape}")
+    print(f"Current bias shape: {model.current_bias.shape}")
+    
+    # Register gradient hooks
+    if model.velocity is not None and model.velocity.requires_grad:
+        model.velocity.register_hook(velocity_hook)
+    
+    # Need to retain graph since bias is updated in forward pass
+    # Create a dummy loss and backward
+    loss = output.mean()
+    loss.backward(retain_graph=True)
+    
+    # Check gradients
+    print("\nAfter backward pass:")
+    
+    # Check all parameters for gradients
+    print("\nGradients for all parameters:")
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            print(f"{name} - Gradient norm: {param.grad.norm().item()}")
+        else:
+            print(f"{name} - No gradient")
+    
+    # Specifically check velocity gradient
+    if model.velocity.grad is not None:
+        print(f"\nVelocity gradient norm: {model.velocity.grad.norm().item()}")
+        print(f"Sample of velocity gradient: {model.velocity.grad.flatten()[:5]}")
+    else:
+        print("\nVelocity has no gradient!")
+    
+    # Check captured gradients from hooks
+    if velocity_grads:
+        print(f"\nCaptured {len(velocity_grads)} velocity gradient(s) from hook")
+        for i, grad in enumerate(velocity_grads):
+            print(f"Velocity hook gradient {i} norm: {grad.norm().item()}")
+    else:
+        print("\nNo velocity gradients captured by hook!")
+
+# Run the debug function        
+if __name__ == "__main__":
+    debug_gradients()
