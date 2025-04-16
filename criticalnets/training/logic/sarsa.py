@@ -16,7 +16,7 @@ class SARSALogic(TrainingLogic):
     taken rather than the maximum Q-value action for the TD target.
     """
     
-    def __init__(self, learning_rate=0.01, gamma=0.99, batch_size=32):
+    def __init__(self, learning_rate=0.01, gamma=0.99, batch_size=1):
         """
         Initialize the SARSA learning parameters.
         

@@ -13,7 +13,7 @@ class TDLogic(TrainingLogic):
     adapted to work with your existing framework.
     """
     
-    def __init__(self, learning_rate=0.01, gamma=0.99, batch_size=32):
+    def __init__(self, learning_rate=0.01, gamma=0.99, batch_size=1):
         """
         Initialize the TD learning parameters.
         
