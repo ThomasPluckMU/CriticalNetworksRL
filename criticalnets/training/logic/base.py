@@ -51,7 +51,18 @@ class TrainingLogic(ABC):
             
         self.optimizer.zero_grad()
         loss.backward()
-        self.optimizer.step()
+        
+        # Print gradient norms for all parameters
+        total_norm = 0
+        for group in self.optimizer.param_groups:
+            for param in group['params']:
+                if param.grad is not None:
+                    param_norm = param.grad.data.norm(2).item()
+                    total_norm += param_norm ** 2
+        
+        total_norm = total_norm ** 0.5
+        print(f" Total gradient norm: {total_norm}, Loss: {loss}")
+
 
     def on_checkpoint(self, episode: int):
         """Callback for checkpoint events"""

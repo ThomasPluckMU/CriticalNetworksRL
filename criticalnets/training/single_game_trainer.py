@@ -37,7 +37,7 @@ class SingleGameTrainer:
         self.target_net.eval()
         
         self.logic = logic
-        self.optimizer = self.logic.configure_optimizer(self.policy_net)
+        self.optimizer = self.logic.configure_optimizer(self.policy_net, lr = config.get('lr'))
         
         self.memory = ReplayMemory(config.get('memory_size', 100000))
         self.all_rewards = []
