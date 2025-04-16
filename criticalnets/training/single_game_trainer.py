@@ -1,4 +1,6 @@
 from typing import Dict, Type
+import numpy as np
+from tqdm import tqdm
 
 from ..agents import BaseAtariAgent
 from ..training.logic import TrainingLogic
@@ -31,11 +33,21 @@ class SingleGameTrainer(BaseTrainer):
         env = self._make_env(game_name)
         
         try:
-            for episode in range(1, episodes + 1):
+            # Initialize tqdm progress bar
+            progress_bar = tqdm(range(1, episodes + 1), desc=f"Training {game_name}", 
+                               unit="episode", dynamic_ncols=True)
+            
+            for episode in progress_bar:
                 total_reward, metrics = self.logic.run_episode(
                     env, self.agent, self.memory, episode
                 )
                 self.all_rewards.append(total_reward)
+                
+                # Update progress bar with the total reward from this episode
+                progress_bar.set_postfix({
+                    'reward': f"{total_reward:.2f}",
+                    'avg_reward': f"{np.mean(self.all_rewards[-100:]):.2f}"
+                })
                 
                 if episode % 100 == 0:
                     self.logic.on_checkpoint(episode)
@@ -46,4 +58,3 @@ class SingleGameTrainer(BaseTrainer):
         finally:
             env.close()
             self.keyboard.stop()
-            

@@ -37,13 +37,13 @@ class GatedDynamicBiasCNN(DynamicBiasCNN):
         batch_size = x.shape[0]
         
         # Convolutional layer output
-        a = self.conv(x)
+        a = self.conv(x) + self.bias
         velocity = self.sigmoid(self.velocity_conv(x))
         z = a - velocity * a
         activation = self.selu(z)
         with torch.no_grad():
-            bias_update = velocity * activation.mean(dim=0, keepdim=True)
-            self.bias.data = self.bias.data - bias_update.squeeze(0)
+            bias_update = velocity * activation
+            self.bias.data = self.bias.data - bias_update
         
         return activation
 
