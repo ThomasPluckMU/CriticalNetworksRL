@@ -21,24 +21,23 @@ Options:
 import argparse
 import os
 import sys
-import importlib
 from pathlib import Path
 import gymnasium as gym
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from criticalnets.training.multi_game_trainer import MultiGameTrainer
-from criticalnets.training.single_game_trainer import SingleGameTrainer
 from criticalnets.environments.atari_manager import AtariManager
 from criticalnets.agents import get_agent_class
+from criticalnets.training.logic import get_logic_class
+from criticalnets.training import get_trainer_class
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train RL agent on Atari games')
-    parser.add_argument('--multi', action='store_true',
-                      help='Train across multiple Atari games')
-    parser.add_argument('--single', type=str,
-                      help='Train on specific Atari game')
+    parser.add_argument('--trainer', type=str,
+                      help='Trainer class from training directory')
+    parser.add_argument('--game', type=str,
+                      help='Choose a game available in py-ALE')
     parser.add_argument('--episodes', type=int, default=1000,
                       help='Number of training episodes')
     parser.add_argument('--render', action='store_true',
@@ -54,7 +53,7 @@ def parse_args():
     parser.add_argument('--agent', type=str, required=True,
                       help='Agent class name from agents directory')
     parser.add_argument('--logic', type=str, required=True,
-                      help='Training logic class path (e.g. criticalnets.training.logic.multi_game.MultiGameLogic)')
+                      help='Training logic class name from training/logic/ directory')
     return parser.parse_args()
 
 def main():
@@ -72,28 +71,16 @@ def main():
     }
     
     # Get agent class
+    trainer_cls = get_trainer_class(args.trainer)
     agent_cls = get_agent_class(args.agent)
+    logic_cls = get_logic_class(args.logic)
     
-    if args.multi:
-        print(f"Starting multi-game training with {args.agent}...")
-        logic_module, logic_class = args.logic.rsplit('.', 1)
-        logic = getattr(importlib.import_module(logic_module), logic_class)()
-        trainer = MultiGameTrainer(config, logic, agent_cls, atari_manager=AtariManager())
-        trainer.train()
-    elif args.single:
-        print(f"Starting single-game training on {args.single} with {args.agent}...")
-        logic_module, logic_class = args.logic.rsplit('.', 1)
-        logic = getattr(importlib.import_module(logic_module), logic_class)()
-        # Create environment to get correct action space
-        env = gym.make(args.single)
-        config['action_space'] = env.action_space.n
-        env.close()
-        
-        trainer = SingleGameTrainer(config, logic, agent_cls, atari_manager=AtariManager())
-        trainer.train(args.single, args.episodes)
-    else:
-        print("Error: Must specify either --multi or --single")
-        sys.exit(1)
+    env = gym.make(args.game)
+    config['action_space'] = env.action_space.n
+    env.close()
+    
+    trainer = trainer_cls(config, logic_cls, agent_cls, atari_manager=AtariManager())
+    trainer.train(args.game, args.episodes)
 
 if __name__ == "__main__":
     main()

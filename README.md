@@ -21,26 +21,19 @@ The main training script is `scripts/train_atari.py`. Basic commands:
 
 ### Multi-game training
 ```bash
-python scripts/train_atari.py --multi \
+python scripts/train_atari.py 
+  --trainer SingleGameTrainer
+  --game "ALE/Pong-v5" \
   --agent GatedAtariUDQN \
-  --logic criticalnets.training.logic.multi_game.MultiGameLogic \
-  --episodes 5000 \
-  --render
-```
-
-### Single-game training
-```bash
-python scripts/train_atari.py --single "ALE/Pong-v5" \
-  --agent GatedAtariUDQN \
-  --logic criticalnets.training.logic.base.TrainingLogic \
+  --logic DiracRewardLogic \
   --episodes 1000 \
   --save-dir my_checkpoints
 ```
 
 Full options:
 ```
---multi              Train across multiple Atari games
---single <game>      Train on specific Atari game
+--trainer            Trainer class name
+--game               Game name from py-ALE library
 --episodes <count>   Number of episodes [default: 1000]
 --render             Enable rendering
 --checkpoint <path>  Load existing checkpoint

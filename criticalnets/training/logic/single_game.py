@@ -1,4 +1,4 @@
-from .base import TrainingLogic
+from . import TrainingLogic
 from typing import Any, Dict, Tuple
 import torch
 

@@ -1,4 +1,4 @@
-from .base import TrainingLogic
+from . import TrainingLogic
 import random
 from typing import Any, Dict, Tuple
 from collections import defaultdict
