@@ -1,28 +1,32 @@
-\section{Reinforcement Learning}
+\subsection{Reinforcement Learning}
 
+\subsection{Statistical Mechanics}
 
-\subsection{Criticality in Statistical Mechanics}
+Criticality in statistical mechanics refers to phase transitions between states of matter. At criticality, systems exhibit "scale-free" correlations where microscopic and macroscopic scales become indistinguishable, manifesting as power-law distributions and long-range correlations that span all space and time scales of the system.
 
-Criticality in statistical mechanics is the study of phase transitions, most classically thought of as transitions between states of matter, such as from water to ice. At the boundary between such phases, are phase boundaries where the system is said to be at criticality. At criticality, systems exhibit "scale-free" correlations in both space and time, where unlike systems not at criticality the microscopic and macroscopic are difficult to distinguish - hence, the system is scale-free.
+The Ising model is often used in studying criticality, where atoms in a lattice have spin states $s_i \in \{+1, -1\}$. Each atom $s_i$ couples to others with parameter $J_{ij}$ and experiences local bias from a field $h_i$. The energy of a configuration $\vec{s}$ is:
+\begin{equation}E(\vec{s}) = \sum_{i\neq j} J_{ij} s_is_j + \sum_i h_is_i\end{equation}
+This defines a Gibbs distribution over the states $\vec{s}$:
+\begin{equation}\mathbb{P}(\vec{s})=\dfrac{1}{Z}\exp(-\beta E(\vec{s}))\end{equation}
+with partition function $Z$ and inverse pseudotemperature $\beta$.
 
-Of particular relevance to the arguement presented in this paper is the notion of criticality in a model of magnetic materials called the Ising model. In an Ising model, atoms are arranged typically in a 3D lattice where each atom $s_i$ can either be spin up $+1$ or spin down $-1$ with some probability $\mathbb{P}(s_i)$, each atom $s_i$ is coupled to every other atom $s_j$ with the coupling parameter $J_{ij}$ and locally biased by the transverse magnetic field given by $h_i$. The energy $E$ of a given configuration of spins in the spin vector $\vec{s}$ is then given by:$$E(\vec{s}) = \sum_{i\neq j} J_{ij} s_is_j + \sum_i h_is_i$$ Which in turn defines the Gibbs distribution:$$\mathbb{P}(\vec{s})=\dfrac{1}{Z}\exp(-\beta E(\vec{s}))$$Where $Z$ is the normalizing partition function and $\beta$ is the inverse pseudotemperature.
-
-In the study of criticality in neural systems, special attention has been paid to the mean-field approximation of the Ising model connected in graphs with high degree $N$. In the mean-field approximation, we replace the exact interactions between spins with an interaction between each spin and the average magnetization of the system. This simplification becomes increasingly accurate as the connectivity of the system grows, making it particularly relevant for highly connected neural networks.
-
-Under the mean-field approximation, the expected value of each spin $s_i$ can be expressed as:
-
-$$\langle s_i \rangle = \tanh(\beta(\sum_j J_{ij}\langle s_j \rangle + h_i))$$
-
-At criticality, which occurs at a specific inverse temperature $\beta_c$ (or equivalently, specific coupling strengths $J_{ij}$), the system exhibits maximal sensitivity to perturbations. Small changes in input can propagate throughout the entire network, leading to large-scale reconfiguration of the system state. This critical point represents a delicate balance between order and disorder - below criticality, the system tends toward fixed point attractors, while above criticality, dynamics become chaotic.
+For neural systems, the mean-field approximation of highly connected Ising models is particularly relevant. In this approximation, the expected value of each spin is:
+\begin{equation}
+\langle s_i \rangle = \tanh(\beta(\sum_j J_{ij}\langle s_j \rangle + h_i))
+\end{equation}
+Which can be noted to bear a striking similarity to a hyperbolic tangent artificial neuron:
+\begin{equation}
+\sigma_i = \tanh(\sum_j w_{ij}x_j + b_i)
+\end{equation}
+Renormalization Group (RG) analysis allows us to understand scale-invariant behavior by coarse-graining (ie. averaging) the individual spins into blocks of size $b^d$ with block-spin variables given by:
+\begin{equation}
+S_I = \frac{1}{b^d}\sum_{i \in \text{block } I} s_i
+\end{equation} When short-distance degrees of freedom are integrated out, we can derive an RG flow equation $dJ_{ij}/db$ and $dh_i/db$ for each parameter in our model. The system is at criticality when $dJ_{ij}/db=0$ and $dh_i/db=0$ therefore no change is exhibited with change of scale, in fact constructing a critical manifold in parameter space.
 
 \subsection{Criticality in Neural Systems}
 
-This equation bears a striking resemblance to the activation function of artificial neurons that use hyperbolic tangent activation. Indeed, if we consider a neural network with tanh activation functions, the state of each neuron can be written as:
+The criticality hypothesis posits that biological neural systems self-organize to operate near critical points between ordered and chaotic dynamics \cite{Beggsetal2003, Beggsetal2012}. Empirical evidence includes observations of "neuronal avalanches" in cortical tissue with size distributions following power laws with exponents of approximately -3/2, matching predictions from critical branching processes \cite{Beggsetal2003}. 
 
-$$\sigma_i = \tanh(\sum_j w_{ij}x_j + b_i)$$
+Neural networks near criticality demonstrate optimal computational properties, including maximized dynamic range \cite{Kinouchietal2006, Shewetal2009}, information transmission \cite{Beggsetal2012}, and information storage capacity \cite{Bertschingeretal2004}. Conversely, deviations from criticality correlate with neural pathologies \cite{Meiseletal2011}, suggesting that maintaining criticality is essential for healthy brain function.
 
-Where $w_{ij}$ are the connection weights, $x_j$ are the inputs, and $b_i$ is the bias. The formal correspondence between these two equations reveals a deep connection: neural networks with tanh activation functions can be interpreted as simulating the dynamics of an Ising model at a specific temperature.
-
-In the context of biological neural systems, criticality has been observed and studied particularly in the context of avalanche statistics and in a variety of different settings including in characterizing the convergence of learned parameters, disappearing and vanishing gradients in RNN systems and optimal information transport.
-
-Taking cues from biological neurons which are believed to be slightly subcritical state at all times allowing them maximal information processing with minimum energy expenditure. Critical neural systems are a valuable target to emulate to learn about.
+These findings motivate our approach: rather than training networks that may accidentally drift away from criticality, we leverage RG flow analysis to design networks that intrinsically maintain critical dynamics throughout operation.
