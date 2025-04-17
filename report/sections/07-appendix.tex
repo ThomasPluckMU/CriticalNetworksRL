@@ -31,7 +31,7 @@ Where $\nabla^2$ is the Laplace operator. We would now like to encode the edge o
 \begin{align}
 \dfrac{\partial}{\partial b_i} \left(1-\dfrac{\|J\|_F}{\sqrt{N}}\right)^2 &=  \dfrac{\partial}{\partial b_i}\left(1-\dfrac{2\|J\|_F}{\sqrt{N}}+\dfrac{\|J\|_F^2}{N}\right)\\
 &= 2\dfrac{\partial}{\partial b_i}\|J\|_F\cdot\dfrac{\|J\|_F}{N} - \dfrac{\partial}{\partial b_i} \dfrac{2\|J\|_F}{\sqrt{N}}\\
-&= \dfrac{2 \sigma'(z_i)\nabla^2 \sigma(z_i)}{\sqrt{N}}\left(\dfrac1N-\dfrac{1}{\sqrt{N}\|J\|_F}\right)
+&= \dfrac{2 \sigma'(z_i)\nabla^2 \sigma(z_i)}{\sqrt{N}}\left(\dfrac{1}{N}-\dfrac{1}{\|J\|_F}\right)
 \end{align}
 
-With the derivation complete, we can note a few things about this quantity...
+\subsection{Properties of the Regularizer}
