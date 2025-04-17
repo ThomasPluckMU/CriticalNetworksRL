@@ -7,8 +7,8 @@ Usage:
   train_atari.py (--multi | --single <game>) [options]
 
 Options:
-  --multi              Train across multiple Atari games
-  --single <game>      Train on specific Atari game
+  --trainer            Choose a valid trainer class rom the training directory [required]
+  --game               Game from the py-ALE library [required]
   --episodes <count>   Number of episodes [default: 1000]
   --render             Enable rendering
   --checkpoint <path>  Load existing checkpoint
@@ -17,6 +17,14 @@ Options:
   --memory-size <size> Replay memory size [default: 100000]
   --agent <name>       Agent class name from agents directory [required]
   --logic <path>       Training logic class path [required]
+  --log-dir <path>     Debug log directory [default: logs]
+  --debug              Enable debug logging of activations/gradients
+
+Debug Features:
+  When --debug is enabled:
+  - Saves layer activations, gradients and loss to JSON files
+  - Logs are saved in <log-dir>/debug/
+  - Progress bar shows current loss value
 """
 import argparse
 import os
@@ -54,6 +62,10 @@ def parse_args():
                       help='Agent class name from agents directory')
     parser.add_argument('--logic', type=str, required=True,
                       help='Training logic class name from training/logic/ directory')
+    parser.add_argument('--log-dir', type=str, default='logs',
+                      help='Directory to save debug logs')
+    parser.add_argument('--debug', action='store_true',
+                      help='Enable debug logging of activations/gradients')
     return parser.parse_args()
 
 def main():
@@ -67,7 +79,9 @@ def main():
         'render': args.render,
         'save_dir': args.save_dir,
         'lr': args.lr,
-        'memory_size': args.memory_size
+        'memory_size': args.memory_size,
+        'log_dir': args.log_dir,
+        'debug': args.debug
     }
     
     # Get agent class

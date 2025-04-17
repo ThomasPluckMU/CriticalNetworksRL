@@ -36,7 +36,9 @@ class DiracRewardLogic(TrainingLogic):
         return total_reward, {
             'game': 'single',
             'steps': episode_idx,
-            'reward': total_reward
+            'reward': total_reward,
+            'loss': loss.detach(),
+            'metrics': agent.get_metrics()
         }
         
     def on_checkpoint(self, episode: int):
@@ -90,7 +92,9 @@ class ExpRewardLogic(TrainingLogic):
         return total_reward, {
             'game': 'single',
             'steps': episode_idx,
-            'reward': total_reward
+            'reward': total_reward,
+            'loss': loss.detach(),
+            'metrics': agent.get_metrics()
         }
         
     def on_checkpoint(self, episode: int):

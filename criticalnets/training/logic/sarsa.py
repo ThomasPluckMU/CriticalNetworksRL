@@ -60,7 +60,7 @@ class SARSALogic(TrainingLogic):
             
             # Keep track of action pairs for SARSA updates
             if len(memory) >= self.batch_size:
-                self._update_network(agent, memory, next_state, next_action)
+                loss = self._update_network(agent, memory, next_state, next_action)
             
             # Move to next state and action
             state = next_state
@@ -70,7 +70,9 @@ class SARSALogic(TrainingLogic):
         return total_reward, {
             'game': 'single',
             'steps': steps,
-            'reward': total_reward
+            'reward': total_reward,
+            'loss': loss,
+            'metrics': agent.get_metrics()
         }
     
     def _update_network(self, agent, memory, current_next_state=None, current_next_action=None):
@@ -138,6 +140,8 @@ class SARSALogic(TrainingLogic):
             if param.grad is not None:
                 param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
+        
+        return loss.detach()
     
     def step_optimizer(self, loss):
         """Helper method to step optimizer with a given loss"""

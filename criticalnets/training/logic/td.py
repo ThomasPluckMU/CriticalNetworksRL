@@ -56,12 +56,14 @@ class TDLogic(TrainingLogic):
             
             # Train the network if we have enough samples
             if len(memory) >= self.batch_size:
-                self._update_network(agent, memory)
+                loss = self._update_network(agent, memory)
         
         return total_reward, {
             'game': 'single',
             'steps': steps,
-            'reward': total_reward
+            'reward': total_reward,
+            'loss': loss,
+            'metrics': agent.get_metrics()
         }
     
     def _update_network(self, agent, memory):
@@ -119,6 +121,8 @@ class TDLogic(TrainingLogic):
             if param.grad is not None:
                 param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
+        
+        return loss.detach()
     
     def step_optimizer(self, loss):
         """Helper method to step optimizer with a given loss"""

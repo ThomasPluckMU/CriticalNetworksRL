@@ -32,22 +32,29 @@ class SingleGameTrainer(BaseTrainer):
             
         env = self._make_env(game_name)
         
+        # Initialize tqdm progress bar
+        progress_bar = tqdm(range(1, episodes + 1), desc=f"Training {game_name}", 
+                           unit="episode", dynamic_ncols=True)
+        
         try:
-            # Initialize tqdm progress bar
-            progress_bar = tqdm(range(1, episodes + 1), desc=f"Training {game_name}", 
-                               unit="episode", dynamic_ncols=True)
-            
             for episode in progress_bar:
                 total_reward, metrics = self.logic.run_episode(
                     env, self.agent, self.memory, episode
                 )
                 self.all_rewards.append(total_reward)
                 
-                # Update progress bar with the total reward from this episode
-                progress_bar.set_postfix({
+                # Log debug metrics if enabled
+                if self.config.get('debug', False) and metrics:
+                    self._log_metrics(metrics['metrics'], episode)
+                
+                # Update progress bar with reward and loss
+                postfix = {
                     'reward': f"{total_reward:.2f}",
                     'avg_reward': f"{np.mean(self.all_rewards[-100:]):.2f}"
-                })
+                }
+                if metrics and 'loss' in metrics:
+                    postfix['loss'] = f"{metrics['loss']:.4f}"
+                progress_bar.set_postfix(postfix)
                 
                 if episode % 100 == 0:
                     self.logic.on_checkpoint(episode)
@@ -58,3 +65,22 @@ class SingleGameTrainer(BaseTrainer):
         finally:
             env.close()
             self.keyboard.stop()
+                    
+    def _log_metrics(self, metrics: dict, episode: int):
+        """Log debug metrics to file"""
+        import json
+        import os
+        from datetime import datetime
+        
+        log_dir = os.path.join(self.config.get('log_dir', 'logs'), 'debug')
+        os.makedirs(log_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"metrics_{timestamp}_ep{episode}.json"
+        
+        with open(os.path.join(log_dir, filename), 'w') as f:
+            json.dump({
+                'episode': episode,
+                'timestamp': timestamp,
+                'metrics': metrics
+            }, f, indent=2)

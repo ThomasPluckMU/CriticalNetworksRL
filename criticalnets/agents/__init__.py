@@ -10,9 +10,41 @@ class BaseAtariAgent(nn.Module):
         super().__init__()
         self.config = config
         self.action_space = action_space
+        self.activations = {}  # Stores layer_name -> output tensors
+        self.gradients = {}    # Stores param_name -> gradient tensors 
+        self.loss = None       # Stores latest loss value
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError("Agents must implement forward()")
+
+    def register_activation_probes(self, layer_names: list):
+        """Add forward hooks to specified layers"""
+        for name, module in self.named_modules():
+            if name in layer_names:
+                module.register_forward_hook(self._save_activation(name))
+
+    def _save_activation(self, name: str):
+        def hook(module, input, output):
+            self.activations[name] = output.detach()
+        return hook
+
+    def set_loss(self, loss: torch.Tensor):
+        """Capture loss and register gradient hooks"""
+        self.loss = loss.detach()
+        self.loss.register_hook(self._save_gradients)
+
+    def _save_gradients(self, grad):
+        for name, param in self.named_parameters():
+            if param.grad is not None:
+                self.gradients[name] = param.grad.detach()
+
+    def get_metrics(self) -> dict:
+        """Return copy of current metrics"""
+        return {
+            'activations': {k: v.clone() for k,v in self.activations.items()},
+            'gradients': {k: v.clone() for k,v in self.gradients.items()},
+            'loss': self.loss.clone() if self.loss is not None else None
+        }
 
 # Auto-discover and register agents
 AGENT_REGISTRY = {}

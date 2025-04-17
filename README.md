@@ -21,7 +21,7 @@ pip install -r requirements.txt
 
 The main training script is `scripts/train_atari.py`. Basic commands:
 
-### Multi-game training
+### Training
 ```bash
 python scripts/train_atari.py 
   --trainer SingleGameTrainer
@@ -29,7 +29,9 @@ python scripts/train_atari.py
   --agent GatedAtariUDQN \
   --logic DiracRewardLogic \
   --episodes 1000 \
-  --save-dir my_checkpoints
+  --save-dir my_checkpoints \
+  --debug \
+  --log-dir training_logs
 ```
 
 Full options:
@@ -44,6 +46,13 @@ Full options:
 --memory-size <size> Replay memory size [default: 100000]
 --agent <name>       Agent class name [required]
 --logic <path>       Training logic class path [required]
+--log-dir <path>     Debug log directory [default: logs]
+--debug              Enable debug logging of activations/gradients
+
+Debug Features:
+- Saves layer activations, gradients and loss to JSON files
+- Logs are saved in <log-dir>/debug/
+- Progress bar shows current loss value
 ```
 
 ## Project Structure

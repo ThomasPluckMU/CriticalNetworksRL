@@ -4,6 +4,7 @@
 **/model_checkpoints/
 **/custom_checkpoints/
 **/.pytest_cache/
+**/logs
 .coverage
 .coveragerc
 **/criticalnets.egg-info
