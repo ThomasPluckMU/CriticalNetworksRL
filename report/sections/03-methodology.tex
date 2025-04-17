@@ -6,5 +6,10 @@ In renormalization analysis
 
 \subsection{Enviroment Setup}
 
+The experiments carried out in this paper uses the Arcade Learning Enviroment (ALE), which provides a standardized interface to 26 of atari 2600 games as challenge problems for general agents\cite{Bellemare_2013}.
+Each game is instantiated via the OpenAi Gym API with deterministic frame-skipping wrappers to ensure consistent dynamics and reproducibility.
+To handle the varying control schemes across different games, the maximum discrete actionspace is computed among the verified enviroments.
+Observations of raw frames (210×160×3) are converted to grayscale, resized to 84x84 pixels and max-pooled over two consecutive frames to mitigate flickering artifacts before stacking four  frames into an 84x84x4 tensor to encode short-term motion\cite{terry2020arcade}
+Rewards are clipped to [-1, +1] to bound temporal-difference targets across games with widely varying reward scales, and actions are taken from the minimal discrete action set, through Gymnasium's API.
 
 \subsection{Experiments}

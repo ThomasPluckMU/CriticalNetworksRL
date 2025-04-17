@@ -1,5 +1,31 @@
 \subsection{Reinforcement Learning}
 
+Reinforcement Learning (RL) provides a computational framework in which a training agent learns to make sequential decisions through interacting with an enviroment to maximize rewards \cite{mnih2013playingatarideepreinforcement}.
+Traditionally, RL problems are modeled as Markov Decision Processes (MDPs) defined by the tuple (\mathcal{S}, \mathcal{A}, P, R), where S is the set of states called the state space, A is the set of actions called the action space, P is the transition probablity function and R is the reward function\cite{Sutton1998}.
+The goal is to find a policy \(\pi(a\!\mid\!s)\) that maximizes the expected return, either via the state‑value function
+\[
+V^\pi(s) = \mathbb{E}_\pi\Bigl[\sum_{t=0}^\infty \gamma^t R(s_t,a_t)\mid s_0 = s\Bigr]
+\]
+or the action‑value function
+\[
+Q^\pi(s,a) = \mathbb{E}_\pi\Bigl[\sum_{t=0}^\infty \gamma^t R(s_t,a_t)\mid s_0 = s,a_0 = a\Bigr].
+\]
+Bellman’s optimality equations characterize the unique fixed point \(Q^*\) (or \(V^*\)) satisfying
+\[
+Q^*(s,a) = R(s,a) + \gamma \sum_{s'} P(s'\!\mid\!s,a)\max_{a'} Q^*(s',a'),
+\]
+enabling dynamic‑programming solutions when \(P\) and \(R\) are known \cite{bellman1962applied}.
+
+Q‑learning is a model‑free, off‑policy algorithm that uses this optimality form to iteratively update \(Q(s,a)\) toward \(Q^*\) via
+\[
+Q_{t+1}(s_t,a_t)\;\leftarrow\;Q_t(s_t,a_t)
++ \alpha\Bigl[r_t + \gamma \max_{a'}Q_t(s_{t+1},a') - Q_t(s_t,a_t)\Bigr]
+\]
+while balancing exploration (e.g.\ \(\varepsilon\)‑greedy) and exploitation \cite{watkins1992q}.  
+
+As a variant of Q-learning, Deep Q-Networks\cite{mnih2013playingatarideepreinforcement} were introduced, employing convolution Neural Networks (CNNs) to approximate \(Q(s,a)\) directly from high-dimensional sensory inputs, emabling end-to-end learning from raw pixels.
+DQN was able to demonstrate human-level performance on 49 atari games through experience-replay buffers and periodically updated target networks\cite{mnih2015humanlevel}.
+
 \subsection{Statistical Mechanics}
 
 Criticality in statistical mechanics refers to phase transitions between states of matter. At criticality, systems exhibit "scale-free" correlations where microscopic and macroscopic scales become indistinguishable, manifesting as power-law distributions and long-range correlations that span all space and time scales of the system.
