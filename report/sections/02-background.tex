@@ -5,21 +5,21 @@
 Criticality in statistical mechanics refers to phase transitions between states of matter. At criticality, systems exhibit "scale-free" correlations where microscopic and macroscopic scales become indistinguishable, manifesting as power-law distributions and long-range correlations that span all space and time scales of the system.
 
 The Ising model is often used in studying criticality, where atoms in a lattice have spin states $s_i \in \{+1, -1\}$. Each atom $s_i$ couples to others with parameter $J_{ij}$ and experiences local bias from a field $h_i$. The energy of a configuration $\vec{s}$ is:
-\begin{equation}E(\vec{s}) = \sum_{i\neq j} J_{ij} s_is_j + \sum_i h_is_i\end{equation}
+\begin{equation}\label{eq:Ising}E(\vec{s}) = \sum_{i\neq j} J_{ij} s_is_j + \sum_i h_is_i\end{equation}
 This defines a Gibbs distribution over the states $\vec{s}$:
-\begin{equation}\mathbb{P}(\vec{s})=\dfrac{1}{Z}\exp(-\beta E(\vec{s}))\end{equation}
+\begin{equation}\label{eq:gibbs}\mathbb{P}(\vec{s})=\dfrac{1}{Z}\exp(-\beta E(\vec{s}))\end{equation}
 with partition function $Z$ and inverse pseudotemperature $\beta$.
 
 For neural systems, the mean-field approximation of highly connected Ising models is particularly relevant. In this approximation, the expected value of each spin is:
-\begin{equation}
+\begin{equation}\label{eq:meanfield}
 \langle s_i \rangle = \tanh(\beta(\sum_j J_{ij}\langle s_j \rangle + h_i))
 \end{equation}
 Which can be noted to bear a striking similarity to a hyperbolic tangent artificial neuron:
-\begin{equation}
-\sigma_i = \tanh(\sum_j w_{ij}x_j + b_i)
+\begin{equation}\label{eq:tanh_neuron}
+\sigma_i = \tanh\left(\sum_j w_{ij}x_j + b_i\right)
 \end{equation}
 Renormalization Group (RG) analysis allows us to understand scale-invariant behavior by coarse-graining (ie. averaging) the individual spins into blocks of size $b^d$ with block-spin variables given by:
-\begin{equation}
+\begin{equation}\label{eq:rg_block}
 S_I = \frac{1}{b^d}\sum_{i \in \text{block } I} s_i
 \end{equation} Under this transformation, the effective parameters of the system (coupling strengths $J_{ij}$ and fields $h_i$) change according to RG flow equations $dS_I/db$. A system exhibits critical behavior when its parameters are tuned to values that remain invariant under this transformation  - specifically at the non-trivial fixed point of these flow equations (ie. $dS_I/db=0$) which form a dense subset in parameter space and construct a critical manifold.
 

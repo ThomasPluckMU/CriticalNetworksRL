@@ -1,0 +1,80 @@
+\subsection*{Derivation of ACNI Trace Hessian Result}
+
+In this section, we provide a detailed derivation of how Anticorrelated Noise Injection (ACNI) implicitly regularizes the loss function by adding a term proportional to the trace of the Hessian.
+
+\paragraph{Background.}
+Standard Perturbed Gradient Descent (PGD) updates parameters as:
+\begin{equation}
+w_{n+1} = w_n - \eta \nabla L(w_n) + \xi_{n+1}
+\end{equation}
+where $\xi_n$ are i.i.d. random variables with mean zero and covariance $\sigma^2I$.
+
+Anti-PGD, on the other hand, replaces these i.i.d. perturbations with their increments:
+\begin{equation}
+w_{n+1} = w_n - \eta \nabla L(w_n) + (\xi_{n+1} - \xi_n)
+\end{equation}
+
+To understand the regularization effect, we introduce the change of variables $z_n := w_n - \xi_n$, which transforms the Anti-PGD update to:
+\begin{equation}
+z_{n+1} = z_n - \eta \nabla L(z_n + \xi_n)
+\end{equation}
+
+\paragraph{Derivation of the Implicit Regularization.}
+To understand how Anti-PGD affects optimization, we need to determine the expected behavior of the update step. We begin by performing a Taylor expansion of $\nabla_i L(z_n + \xi_n)$ around $z_n$:
+\begin{align}
+\nabla_i L(z_n + \xi_n) &= \nabla_i L(z_n) + \sum_j \nabla^2_{ij}L(z_n) \xi^j_n \\
+&+ \frac{1}{2}\sum_{j,k} \nabla^3_{ijk}L(z_n) \xi^j_n \xi^k_n + O(||\xi_n||^3)
+\end{align}
+
+This allows us to express the update for component $i$ as:
+\begin{align}
+z^i_{n+1} &= z^i_n - \eta \nabla_i L(z_n + \xi_n) \\
+&= z^i_n - \eta \nabla_i L(z_n) - \eta \sum_j \nabla^2_{ij}L(z_n) \xi^j_n \\
+&- \frac{\eta}{2}\sum_{j,k} \nabla^3_{ijk}L(z_n) \xi^j_n \xi^k_n + O(\eta||\xi_n||^3)
+\end{align}
+
+By Clairaut's theorem (assuming continuous fourth-order partial derivatives), we can rewrite the third-order term as:
+\begin{align}
+\sum_{j,k} \nabla^3_{ijk}L(z_n) \xi^j_n \xi^k_n = 2\sum_{j<k} \nabla^3_{ijk}L(z_n) \xi^j_n \xi^k_n + \sum_j \nabla^3_{ijj}L(z_n) (\xi^j_n)^2
+\end{align}
+
+Taking the conditional expectation with respect to $z_n$, and using the fact that $\xi_n$ has mean zero and covariance $\sigma^2I$, we get:
+\begin{align}
+\mathbb{E}[z^i_{n+1} | z_n] &= z^i_n - \eta \nabla_i L(z_n) - \frac{\eta\sigma^2}{2} \sum_j \nabla^3_{ijj}L(z_n) \\
+&+ O(\eta\mathbb{E}[||\xi_n||^3])
+\end{align}
+
+The middle term can be rewritten as:
+\begin{equation}
+\sum_j \nabla^3_{ijj}L(z_n) = \nabla_i \left( \sum_j \nabla^2_{jj}L(z_n) \right) = \nabla_i \text{Tr}(\nabla^2 L(z_n))
+\end{equation}
+
+Therefore:
+\begin{align}
+\mathbb{E}[z^i_{n+1} | z_n] &= z^i_n - \eta \nabla_i \left( L(z_n) + \frac{\sigma^2}{2} \text{Tr}(\nabla^2 L(z_n)) \right) \\
+&+ O(\eta\mathbb{E}[||\xi_n||^3])
+\end{align}
+
+This means that in expectation, Anti-PGD takes gradient steps according to a modified loss function:
+\begin{equation}
+\tilde{L}(z) = L(z) + \frac{\sigma^2}{2} \text{Tr}(\nabla^2 L(z))
+\end{equation}
+
+The modified loss $\tilde{L}$ includes an additional regularization term proportional to the trace of the Hessian of the original loss function. This regularization term encourages the optimizer to find flatter minima (with smaller Hessian trace), which has been empirically associated with better generalization performance.
+
+\paragraph{Theoretical Guarantees.}
+As shown in Theorem 2.1 of the original paper, under appropriate conditions for learning rate $\eta$ and noise variance $\sigma^2$, Anti-PGD effectively minimizes this regularized loss in the sense that:
+\begin{equation}
+\mathbb{E}\left[ \frac{1}{N} \sum_{n=0}^{N-1} ||\nabla \tilde{L}(z_n)||^2 \right] \leq O(\eta) + O(\eta^3)
+\end{equation}
+
+\paragraph{Connection to Generalization.}
+The trace of the Hessian is connected to generalization performance through PAC-Bayes bounds. For a Gaussian posterior distribution $Q(w|w^*)$ with variance $s^2$ centered at a solution $w^*$, the expected sharpness term in the PAC-Bayes bound can be approximated as:
+\begin{equation}
+\mathbb{E}_{w \sim Q(w|w^*)}[L(w)] - L(w^*) \approx \frac{s^2}{2} \text{Tr}(\nabla^2 L(w^*))
+\end{equation}
+
+By minimizing the trace of the Hessian, Anti-PGD reduces this generalization gap, leading to solutions that are expected to generalize better. This provides a theoretical justification for the empirical observation that flatter minima often generalize better in deep learning.
+\subsection*{Derivation of Proposed Implicit Regularizer}
+
+\subsection*{Proof of Scale-Free Map-Loss Correspondence}
