@@ -1,0 +1,37 @@
+\section{Derivation of the Criticality Regularizer}
+
+In this appendix, we provide a rigorous derivation of our proposed regularization term that promotes criticality in neural networks. Our approach drives networks to the edge of chaos through both explicit Jacobian constraints and implicit scale-free dynamics.
+
+\subsection{Regularizing to the Edge of Chaos}
+
+Let us define a standard feedforward network $a=\sigma(z)$ where preactivation $z=Wx+b$ is defined with weight matrix $W$, bias $b$, input $x$ and the put through non-linearity $\sigma$ to create activation $a$. A known fact about rank-$N$ operators $J$ is that their Lyapunov exponent collapse when $\|J\|_F^2 = N$ at the so-called "edge of chaos".
+
+We derive our regularizer by letting $J$ be the Jacobian of the feedforward layer $a=\sigma(z)$ and finding explicit derivatives in terms of weights $W$ and biases $b$ to minimize the quantity $J$ - to simplify derivation we will focus entirely on individual entries of $b$ the $b_i$ and assure the reader that much same terms will arise when computing the derivative of $W_{ij}$
+
+Let us begin by computing the derivative of $a_i$ with respect to $x_j$ for the individual terms of the Jacobian $J_{ij}$:
+\begin{equation}
+J_{ij}=\dfrac{\partial}{\partial x_j} \sigma(z_i) = W_{ij}\sigma'(z_i)
+\end{equation}
+
+We can now compute the Frobenius norm of $J$ and begin computing it's derivative w.r.t. $b_i$:
+
+\begin{align}
+\dfrac{\partial}{\partial b_i}\|J\|_F &= \dfrac{\partial}{\partial b_i} \sqrt{\sum_{i,j}W_{ij}^2\sigma'(z_i)^2}\\
+&= \dfrac{\sum_{j} W_{ij}^2 \sigma'(z_i) \sigma''(z_i)}{\|J\|_F}
+\end{align}
+
+We note at this juncture that $\frac{\partial^2}{\partial x_j^2} \sigma(z_i) = W_{ij}^2 \sigma''(z_i)$ so we may write:
+
+\begin{equation}
+\dfrac{\partial}{\partial b_i}\|J\|_F = \dfrac{\sigma'(z_i) \nabla^2\sigma(z_i)}{\|J\|_F}
+\end{equation}
+
+Where $\nabla^2$ is the Laplace operator. We would now like to encode the edge of chaos criterion $\|J\|_F^2=N$ into an explicit quantity that we can minimize using the parameters of our network.
+
+\begin{align}
+\dfrac{\partial}{\partial b_i} \left(1-\dfrac{\|J\|_F}{\sqrt{N}}\right)^2 &=  \dfrac{\partial}{\partial b_i}\left(1-\dfrac{2\|J\|_F}{\sqrt{N}}+\dfrac{\|J\|_F^2}{N}\right)\\
+&= 2\dfrac{\partial}{\partial b_i}\|J\|_F\cdot\dfrac{\|J\|_F}{N} - \dfrac{\partial}{\partial b_i} \dfrac{2\|J\|_F}{\sqrt{N}}\\
+&= \dfrac{2 \sigma'(z_i)\nabla^2 \sigma(z_i)}{\sqrt{N}}\left(\dfrac1N-\dfrac{1}{\sqrt{N}\|J\|_F}\right)
+\end{align}
+
+With the derivation complete, we can note a few things about this quantity...
