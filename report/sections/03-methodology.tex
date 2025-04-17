@@ -1,30 +1,8 @@
-\subsection{Proposed Implicit Regularizer}
+\subsection{Critical Neural Network Architecture}
 
-Our proposal primarily builds on the Anti-Correlated Noise Injection (ACNI) implicit regularization method\cite{orvieto2022anticorrelated}. In ACNI, standard stochastic gradient descent an i.i.d noise source $\xi_n\sim \mathcal{N}(\vec{0},\sigma^2 I)$ is used to create temporally anticorrelated noise $\zeta_n=\xi_n-\xi_{n-1}$ - this is then fed into the gradient step on parameter $w_n$:
-\begin{equation}
-w_{n+1} = w_n - \eta\nabla L(w_n)+\zeta_n
-\end{equation}
-It is subsequently proven in the ACNI paper that an implicit loss function emerges from the action perturbations on gradients that minimizes the trace Hessian leading to robust, flat region of the loss landscape:
+The proposed architecture relies on the identification between $\tanh$ activated neurons and the mean-field Ising model approximation and leverages renormalization analysis to derive an empirical rule that dynamically biases the network towards criticality.
 
-\begin{equation}
-\tilde{L}(z)= L(z)+\dfrac{\sigma^2}{2}\text{Tr}(\nabla^2L(z))
-\end{equation}
-
-Our main contribution is the introduction a control mechanism to the variance term $\sigma^2$ in ACNI that works to bias training toward edge-the-chaos and criticality.
-
-The variance that we define is given by:
-
-\begin{equation}
-\sigma^2 = \dfrac{2}{\sqrt{N}}\left(\dfrac{1}{N}-\dfrac{1}{\|{\nabla L(z)}\|}\right)
-\end{equation}
-
-Explicitly this leads to the implicit loss function:
-
-\begin{equation}
-\tilde{L}(z)= L(z)+\dfrac{1}{\sqrt{N}}\bigg(\underbrace{\dfrac{1}{N}}_{\substack{\text{quadratic} \\ \text{scaling}}}-\underbrace{\dfrac{1}{\|{\nabla L(z)}\|}}_{\substack{\text{linear} \\ \text{scaling}}}\bigg)\text{Tr}(\nabla^2L(z))
-\end{equation}
-    
-Where $N$ is the rank of the learned map. This quantity is explicitly derived from a minimization problem with a contrived solution at the edge of chaos. Surprisingly, this includes two competing terms that scale quadratically and linearly respectively - implying that the minimization of this term can only come about in regimes where quadratic and linear scaling are equal, ie. in a scale-free region of the loss-landscape. Complete derivation of this term and proof that scale-free loss implies that ANN models learn scale-free maps can be found in the appendix.
+In renormalization analysis
 
 \subsection{Enviroment Setup}
 
