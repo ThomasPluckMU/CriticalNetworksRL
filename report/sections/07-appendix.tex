@@ -1,6 +1,6 @@
 \section{Derivation of the Criticality Regularizer}
 
-In this appendix, we provide a rigorous derivation of our proposed regularization term that promotes criticality in neural networks. Our approach drives networks to the edge of chaos through both explicit Jacobian constraints and implicit scale-free dynamics.
+In this appendix, we provide a rigorous derivation of our proposed regularization term that promotes criticality in neural networks. Our approach drives networks to the edge of chaos by explicit Jacobian constraints, incidentally the derived regularizer also pushes the network towards scale-free dynamics - providing a  tentative theoretical justification that the edge of chaos may be sufficient for criticality in ANNs.
 
 \subsection{Regularizing to the Edge of Chaos}
 
@@ -35,3 +35,11 @@ Where $\nabla^2$ is the Laplace operator. We would now like to encode the edge o
 \end{align}
 
 \subsection{Properties of the Regularizer}
+
+At this juncture we can begin to discuss the properties of the proposed regularizer - while it clearly regularises the network toward the edge of chaos, it is not immediately clear from the form derived that minimizing this quantity leads to criticality and scale-free phenomena.
+
+The simplest observation comes from understanding the nature of the Laplacian and Jacobian when applied to re-scaled linear maps. Given some linear map $L:\mathbb{R}^n\to \mathbb{R}^n$, the effect of rescaling this map as $L'(x) = L(x/\alpha)$ has a quadratic action on the Laplacian such that $\nabla^2 L'(x) = \nabla^2 L(x/\alpha) = (1/\alpha^2)\nabla^2 L(x/\alpha)$, and similarly a linear action on the Jacobian where $J_{L'}(x) = J_L(x/\alpha) \cdot (1/\alpha)I = (1/\alpha)J_L(x/\alpha)$. This demonstrates that the Laplacian scales by a factor of $1/\alpha^2$ while the Jacobian scales by a factor of $1/\alpha$ under coordinate rescaling.
+
+So looking at the derived form above, we can see it as the difference between a quadratic and linear scaling operator (at least in the linear sense) - if we then attempt to minimize this quantity, it follows that we are trying to find a regime in which linear and quadratic scaling are equivalent, ie. the system is scale-free.
+
+The extent that this analysis can be extended to the full quasi-linear case seen in neural networks would require a complete renormalization group analysis to formalize this connection rigorously, as the non-linearities in neural networks introduce complexities beyond the simplified linear map case presented here.

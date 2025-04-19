@@ -1,8 +1,12 @@
-\subsection{Critical Neural Network Architecture}
+\subsection{Edge of Chaos Regularizer}
 
-The proposed architecture relies on the identification between $\tanh$ activated neurons and the mean-field Ising model approximation and leverages renormalization analysis to derive an empirical rule that dynamically biases the network towards criticality.
+The proposed method involves the addition of a regularization term to the loss function, which guides the network towards the edge of chaos and in a linear approximation induces criticality - the full derivation can found in the appendix of this paper:
 
-In renormalization analysis
+\begin{equation}
+R_{(layer)} = \dfrac{2\sigma''(z)\nabla_x^2\sigma(z)}{\sqrt{N}}\left(\dfrac{1}{N}-\dfrac{1}{\|\nabla_x \sigma(z)\|}\right)
+\end{equation}
+
+Where $N$ is the number of neurons, $x$ is the input vector, $z$ the pre-activation affine transform of $x$, $\sigma$ an elementwise activation non-linearity and $\nabla$ and $\nabla^2$ the gradient and Laplace operators respectively.
 
 \subsection{Enviroment Setup}
 
