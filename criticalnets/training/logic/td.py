@@ -13,7 +13,7 @@ class TDLogic(TrainingLogic):
     adapted to work with your existing framework.
     """
     
-    def __init__(self, learning_rate=0.01, gamma=0.99, batch_size=1):
+    def __init__(self, learning_rate=0.01, gamma=0.99, batch_size=1, reg_strength=0.01):
         """
         Initialize the TD learning parameters.
         
@@ -21,10 +21,12 @@ class TDLogic(TrainingLogic):
             learning_rate: Learning rate for the optimizer
             gamma: Discount factor for future rewards
             batch_size: Mini-batch size for experience replay
+            reg_strength: Strength of the criticality regularization
         """
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.batch_size = batch_size
+        self.reg_strength = reg_strength
         self.loss_fn = None
         self.optimizer = None
     
@@ -98,18 +100,17 @@ class TDLogic(TrainingLogic):
         # Compute current Q values: Q(s,a)
         current_q_values = agent.forward(state_batch)
         # Get the Q-values for the actions that were taken
-        q_values = current_q_values.gather(1, action_batch.unsqueeze(1)).squeeze()
+        q_values = current_q_values.gather(1, action_batch.unsqueeze(1)).squeeze(1)
         
         # Compute next Q values (for TD target): max_a' Q(s',a')
         with torch.no_grad():
-            # For Q-learning (off-policy), use the maximum Q-value for the next state
-            next_q_values = agent.forward(next_state_batch).max(1)[0]
-            # Set Q-value to 0 for terminal states
-            next_q_values = next_q_values * (1 - done_batch)
-            
+            next_q = self.target_net(next_state_batch)       
+             # For Q-learning (off-policy), use the maximum Q-value for the next state
+            next_max = next_q.max(dim=1)[0]                  
+             # Set Q-value to 0 for terminal states
+            next_max = next_max * (1 - done_batch)          
             # Compute TD target: r + γ * max_a' Q(s', a')
-            td_targets = reward_batch + (self.gamma * next_q_values)
-        
+            td_targets = reward_batch + (self.gamma * next_max)        
         # Compute loss
         loss = self.loss_fn(q_values, td_targets)
         

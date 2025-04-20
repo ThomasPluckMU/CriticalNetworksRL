@@ -75,8 +75,8 @@ class StandardAtariDQN(BaseAtariAgent):
         """Select action using epsilon-greedy policy"""
         if random.random() < self.config.get('epsilon', 0.1):
             # Return random valid action (0-3 for Breakout)
-            return random.randint(0, 3)
+            return random.randint(0, 5)
         with torch.no_grad():
             q_values = self.forward(state.unsqueeze(0))
             # Get top action and clamp to Breakout's action space (0-3)
-            return min(q_values.argmax().item(), 3)
+            return min(q_values.argmax().item(), 5)

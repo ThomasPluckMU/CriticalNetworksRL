@@ -22,6 +22,8 @@ class SingleGameTrainer(BaseTrainer):
 
         self.optimizer = self.logic.configure_optimizer(self.policy_net, lr=config.get('lr'))
 
+        self.logic.target_net = self.target_net
+
     def train(self, game_name: str, episodes: int):
         """Train on a single game"""
         if game_name not in self.atari_manager.working_games:
