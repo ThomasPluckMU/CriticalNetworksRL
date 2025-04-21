@@ -131,6 +131,9 @@ class SARSALogic(TrainingLogic):
         
         # Compute loss
         loss = self.loss_fn(q_values, sarsa_targets)
+        reg_loss = agent.get_metrics().get('criticality_loss')
+        if reg_loss is not None:
+            loss += reg_loss
         
         # Optimize the model
         self.optimizer.zero_grad()
@@ -255,6 +258,9 @@ class ExpectedSARSALogic(SARSALogic):
         
         # Compute loss and update
         loss = self.loss_fn(q_values, expected_sarsa_targets)
+        reg_loss = agent.get_metrics().get('criticality_loss')
+        if reg_loss is not None:
+            loss += reg_loss
         self.optimizer.zero_grad()
         loss.backward()
         for param in agent.parameters():

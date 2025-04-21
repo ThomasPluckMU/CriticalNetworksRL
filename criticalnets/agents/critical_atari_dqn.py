@@ -6,6 +6,13 @@ import numpy as np
 from typing import Dict
 from . import BaseAtariAgent
 
+from ..utils.numerical_helpers import (
+    get_activation_derivatives,
+    compute_jacobian_approximation,
+    compute_laplacian_approximation,
+    criticality_regularization
+)
+
 class CriticalAgent(BaseAtariAgent):
     """
     Atari agent implementing the Edge of Chaos regularization from the paper.
@@ -28,6 +35,8 @@ class CriticalAgent(BaseAtariAgent):
         self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        
+        self.activation_function = F.softplus
         
         # Fully connected layers - will be initialized after first forward pass
         self.fc = None
@@ -66,20 +75,20 @@ class CriticalAgent(BaseAtariAgent):
         # Save input for regularization
         self.saved_inputs['input'] = x
         
-        # First convolutional layer with ReLU
+        # First convolutional layer with self.activation_function
         z1 = self.conv1(x)
-        self.saved_activations['conv1'] = {'z': z1, 'a': F.relu(z1)}
-        a1 = F.relu(z1)
+        self.saved_activations['conv1'] = {'x': x, 'z': z1, 'a': self.activation_function(z1), 'model': self.conv1}
+        a1 = self.activation_function(z1)
         
-        # Second convolutional layer with ReLU
+        # Second convolutional layer with self.activation_function
         z2 = self.conv2(a1)
-        self.saved_activations['conv2'] = {'z': z2, 'a': F.relu(z2)}
-        a2 = F.relu(z2)
+        self.saved_activations['conv2'] = {'x': a1, 'z': z2, 'a': self.activation_function(z2), 'model': self.conv2}
+        a2 = self.activation_function(z2)
         
-        # Third convolutional layer with ReLU
+        # Third convolutional layer with self.activation_function
         z3 = self.conv3(a2)
-        self.saved_activations['conv3'] = {'z': z3, 'a': F.relu(z3)}
-        a3 = F.relu(z3)
+        self.saved_activations['conv3'] = {'x': a2, 'z': z3, 'a': self.activation_function(z3), 'model': self.conv3}
+        a3 = self.activation_function(z3)
         
         # Flatten with actual dimensions
         x_flat = a3.view(a3.size(0), -1)
@@ -90,7 +99,7 @@ class CriticalAgent(BaseAtariAgent):
             
         # Fully connected layer
         z4 = self.fc(x_flat)
-        self.saved_activations['fc'] = {'z': z4, 'a': torch.sigmoid(z4)}
+        self.saved_activations['fc'] = {'x': x_flat, 'z': z4, 'a': torch.sigmoid(z4), 'model': self.fc}
         a4 = torch.sigmoid(z4)
         
         # Output layer
@@ -107,75 +116,6 @@ class CriticalAgent(BaseAtariAgent):
             q_values = self.forward(state.unsqueeze(0))
             # Get top action and clamp to Breakout's action space (0-3)
             return min(q_values.argmax().item(), 5)
-
-
-
-    def calculate_criticality_regularization(self):
-        """
-        Calculate the Edge of Chaos regularization term:
-        R(layer) = (2σ′′(z)∇²ₓσ(z)/√N) * (1/N - 1/||∇ₓσ(z)||)
-        
-        Returns:
-            Regularization loss
-        """
-        reg_loss = 0.0
-        
-        for name, saved in self.saved_activations.items():
-            if name in ['conv1', 'conv2', 'conv3', 'fc']:
-                z = saved['z']
-                
-                # For ReLU layers (convolutional layers)
-                if name in ['conv1', 'conv2', 'conv3']:
-                    # Compute σ'(z) (derivative of ReLU)
-                    sigma_prime = (z > 0).float()
-                    
-                    # Compute σ''(z) (second derivative of ReLU)
-                    # Note: For ReLU, σ''(z) is zero almost everywhere except at z=0
-                    # We use a small epsilon approximation to avoid zero gradients
-                    epsilon = 1e-5
-                    sigma_double_prime = torch.zeros_like(z)
-                    sigma_double_prime[(z.abs() < epsilon)] = 1.0 / epsilon
-                    
-                    # Number of neurons in this layer
-                    N = z.size(1) * z.size(2) * z.size(3)
-                    
-                    # Compute Jacobian norm approximation
-                    jacobian_norm = torch.sqrt(torch.sum(sigma_prime**2))
-                    
-                    # Compute Laplacian approximation 
-                    laplacian = torch.sum(sigma_double_prime)
-                    
-                    # Compute the regularization term
-                    layer_reg = (2 * sigma_double_prime * laplacian / torch.sqrt(torch.tensor(N, device=z.device))) * \
-                               (1.0 / N - 1.0 / jacobian_norm)
-                               
-                    reg_loss += torch.abs(layer_reg.mean())
-                
-                # For Sigmoid layer (fc layer)
-                elif name == 'fc':
-                    # Compute σ'(z) (derivative of sigmoid)
-                    a = torch.sigmoid(z)
-                    sigma_prime = a * (1 - a)
-                    
-                    # Compute σ''(z) (second derivative of sigmoid)
-                    sigma_double_prime = a * (1 - a) * (1 - 2 * a)
-                    
-                    # Number of neurons in this layer
-                    N = z.size(1)
-                    
-                    # Compute Jacobian norm approximation
-                    jacobian_norm = torch.sqrt(torch.sum(sigma_prime**2))
-                    
-                    # Compute Laplacian approximation
-                    laplacian = torch.sum(sigma_double_prime)
-                    
-                    # Compute the regularization term
-                    layer_reg = (2 * sigma_double_prime * laplacian / torch.sqrt(torch.tensor(N, device=z.device))) * \
-                               (1.0 / N - 1.0 / jacobian_norm)
-                               
-                    reg_loss += torch.abs(layer_reg.mean())
-        
-        return reg_loss * self.reg_strength
     
     def get_metrics(self):
         """
@@ -188,39 +128,27 @@ class CriticalAgent(BaseAtariAgent):
         
         # Add criticality metrics
         with torch.no_grad():
+            criticality_total = 0
             for name, saved in self.saved_activations.items():
                 if name in ['conv1', 'conv2', 'conv3', 'fc']:
                     z = saved['z']
+                    x = saved['x']
+                    model = saved['model']
                     
-                    # For convolutional layers
+                    # For all layers
+                    # Number of neurons in this layer
                     if name in ['conv1', 'conv2', 'conv3']:
-                        # Number of neurons in this layer
                         N = z.size(1) * z.size(2) * z.size(3)
-                        
-                        # Compute σ'(z) (derivative of ReLU)
-                        sigma_prime = (z > 0).float()
-                        
-                        # Compute Jacobian norm
-                        jacobian_norm = torch.sqrt(torch.sum(sigma_prime**2))
-                        
-                        # Calculate how close we are to N
-                        criticality_metric = (jacobian_norm**2 / N - 1.0).abs().item()
-                        metrics[f'{name}_criticality'] = criticality_metric
-                        
-                    # For fc layer
-                    elif name == 'fc':
-                        # Number of neurons in this layer
+                        ltype = name[:-1]
+                    else:  # 'fc'
                         N = z.size(1)
-                        
-                        # Compute σ'(z) (derivative of sigmoid)
-                        a = torch.sigmoid(z)
-                        sigma_prime = a * (1 - a)
-                        
-                        # Compute Jacobian norm
-                        jacobian_norm = torch.sqrt(torch.sum(sigma_prime**2))
-                        
-                        # Calculate how close we are to N
-                        criticality_metric = (jacobian_norm**2 / N - 1.0).abs().item()
-                        metrics[f'{name}_criticality'] = criticality_metric
+                        ltype = 'fc'
+                                
+                    # Compute approximation of Jacobian norm
+                    activation_func = self.activation_function if name != 'fc' else torch.sigmoid
+                    # Calculate how close we are to N
+                    criticality_total += criticality_regularization(model,x,activation_func, ltype)
+        
+        metrics[f'criticality_loss'] = criticality_total
         
         return metrics

@@ -30,7 +30,10 @@ class DiracRewardLogic(TrainingLogic):
                 q_values = agent.forward(state_tensor)
                 normalized_q = q_values/torch.norm(q_values)
                 target = reward*normalized_q.detach()  # Detach target to avoid double backprop
+                reg_loss = agent.get_metrics().get('criticality_loss')
                 loss = self.loss_fn(normalized_q, target) * 1e7
+                if reg_loss is not None:
+                    loss += reg_loss
                 self.step_optimizer(loss)
     
         return total_reward, {
@@ -85,6 +88,9 @@ class ExpRewardLogic(TrainingLogic):
             normalized_q = q_values/torch.norm(q_values)
             target = reward*normalized_q.detach()  # Detach target to avoid double backprop
             new_loss = self.loss_fn(normalized_q, target)
+            reg_loss = self.agent.get_metrics().get('criticality_loss')
+            if reg_loss is not None:
+                new_loss += reg_loss
             loss *= gamma
             loss += (1-gamma)*new_loss
             self.step_optimizer(loss)
