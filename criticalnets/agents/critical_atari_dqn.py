@@ -29,14 +29,14 @@ class CriticalAgent(BaseAtariAgent):
         super().__init__(config, action_space)
         self.device = torch.device(config.get('device', 'cpu'))
         self.frame_stack = config.get('frame_stack', 4)
-        self.reg_strength = config.get('reg_strength', 0.01)
+        self.reg_strength = config.get('reg_strength', 1e0)
         
         # Define standard convolutional layers (without dynamic bias)
         self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
         
-        self.activation_function = F.softplus
+        self.activation_function = F.tanh
         
         # Fully connected layers - will be initialized after first forward pass
         self.fc = None
@@ -99,8 +99,8 @@ class CriticalAgent(BaseAtariAgent):
             
         # Fully connected layer
         z4 = self.fc(x_flat)
-        self.saved_activations['fc'] = {'x': x_flat, 'z': z4, 'a': torch.sigmoid(z4), 'model': self.fc}
-        a4 = torch.sigmoid(z4)
+        self.saved_activations['fc'] = {'x': x_flat, 'z': z4, 'a': F.sigmoid(z4), 'model': self.fc}
+        a4 = F.sigmoid(z4)
         
         # Output layer
         output = self.head(a4)
@@ -127,28 +127,29 @@ class CriticalAgent(BaseAtariAgent):
         metrics = super().get_metrics() if hasattr(super(), 'get_metrics') else {}
         
         # Add criticality metrics
-        with torch.no_grad():
-            criticality_total = 0
-            for name, saved in self.saved_activations.items():
-                if name in ['conv1', 'conv2', 'conv3', 'fc']:
-                    z = saved['z']
-                    x = saved['x']
-                    model = saved['model']
-                    
-                    # For all layers
-                    # Number of neurons in this layer
-                    if name in ['conv1', 'conv2', 'conv3']:
-                        N = z.size(1) * z.size(2) * z.size(3)
-                        ltype = name[:-1]
-                    else:  # 'fc'
-                        N = z.size(1)
-                        ltype = 'fc'
-                                
-                    # Compute approximation of Jacobian norm
-                    activation_func = self.activation_function if name != 'fc' else torch.sigmoid
-                    # Calculate how close we are to N
-                    criticality_total += criticality_regularization(model,x,activation_func, ltype)
+        criticality_total = 0
+        for name, saved in self.saved_activations.items():
+            if name in ['conv1', 'conv2', 'conv3', 'fc']:
+                # Ensure tensors have gradients preserved
+                z = saved['z'].detach().requires_grad_(True)
+                x = saved['x'].detach().requires_grad_(True)
+                model = saved['model']
+                
+                # For all layers
+                # Number of neurons in this layer
+                if name in ['conv1', 'conv2', 'conv3']:
+                    N = z.size(1) * z.size(2) * z.size(3)
+                    ltype = name[:-1]
+                else:  # 'fc'
+                    N = z.size(1)
+                    ltype = 'fc'
+                            
+                # Compute approximation of Jacobian norm
+                activation_func = self.activation_function if name != 'fc' else F.sigmoid
+                # Calculate how close we are to N
+                criticality_total += criticality_regularization(model, x, activation_func, ltype)
         
-        metrics[f'criticality_loss'] = criticality_total
+        # Convert tensor to scalar for logging
+        metrics[f'criticality_loss'] = self.reg_strength * criticality_total.item()
         
         return metrics

@@ -61,7 +61,6 @@ class SARSALogic(TrainingLogic):
             # Keep track of action pairs for SARSA updates
             if len(memory) >= self.batch_size:
                 loss = self._update_network(agent, memory, next_state, next_action)
-            
             # Move to next state and action
             state = next_state
             action = next_action
@@ -181,89 +180,91 @@ class SARSALogic(TrainingLogic):
         return self.optimizer
 
 
+# TODO: Fix.
+
 # You can also implement Expected SARSA, which uses expected values rather than samples
-class ExpectedSARSALogic(SARSALogic):
-    """
-    Expected SARSA: A variant of SARSA that uses the expected value of Q(s',a')
-    under the current policy, rather than a sample.
+# class ExpectedSARSALogic(SARSALogic):
+#     """
+#     Expected SARSA: A variant of SARSA that uses the expected value of Q(s',a')
+#     under the current policy, rather than a sample.
     
-    This often has lower variance than vanilla SARSA.
-    """
+#     This often has lower variance than vanilla SARSA.
+#     """
     
-    def _update_network(self, agent, memory, current_next_state=None, current_next_action=None):
-        """
-        Update the network using Expected SARSA TD learning.
-        This implements: Q(s,a) ← Q(s,a) + α[r + γ*E[Q(s',a')] - Q(s,a)]
-        where E[Q(s',a')] is the expected value of the next state under the policy
-        """
-        # Sample a batch of transitions from memory
-        transitions = memory.sample(self.batch_size)
+#     def _update_network(self, agent, memory, current_next_state=None, current_next_action=None):
+#         """
+#         Update the network using Expected SARSA TD learning.
+#         This implements: Q(s,a) ← Q(s,a) + α[r + γ*E[Q(s',a')] - Q(s,a)]
+#         where E[Q(s',a')] is the expected value of the next state under the policy
+#         """
+#         # Sample a batch of transitions from memory
+#         transitions = memory.sample(self.batch_size)
         
-        # Extract components from transitions
-        states = []
-        actions = []
-        rewards = []
-        next_states = []
-        dones = []
+#         # Extract components from transitions
+#         states = []
+#         actions = []
+#         rewards = []
+#         next_states = []
+#         dones = []
         
-        for t in transitions:
-            states.append(t.state)
-            actions.append(t.action)
-            rewards.append(t.reward)
-            next_states.append(t.next_state)
-            dones.append(t.done)
+#         for t in transitions:
+#             states.append(t.state)
+#             actions.append(t.action)
+#             rewards.append(t.reward)
+#             next_states.append(t.next_state)
+#             dones.append(t.done)
         
-        # Create tensors for each element
-        state_batch = torch.FloatTensor(np.array(states)).to(agent.device)
-        action_batch = torch.LongTensor(np.array(actions)).to(agent.device)
-        reward_batch = torch.FloatTensor(np.array(rewards)).to(agent.device)
-        next_state_batch = torch.FloatTensor(np.array(next_states)).to(agent.device)
-        done_batch = torch.FloatTensor(np.array(dones)).to(agent.device)
+#         # Create tensors for each element
+#         state_batch = torch.FloatTensor(np.array(states)).to(agent.device)
+#         action_batch = torch.LongTensor(np.array(actions)).to(agent.device)
+#         reward_batch = torch.FloatTensor(np.array(rewards)).to(agent.device)
+#         next_state_batch = torch.FloatTensor(np.array(next_states)).to(agent.device)
+#         done_batch = torch.FloatTensor(np.array(dones)).to(agent.device)
         
-        # Compute current Q values
-        current_q_values = agent.forward(state_batch)
-        q_values = current_q_values.gather(1, action_batch.unsqueeze(1)).squeeze()
+#         # Compute current Q values
+#         current_q_values = agent.forward(state_batch)
+#         q_values = current_q_values.gather(1, action_batch.unsqueeze(1)).squeeze()
         
-        # Compute expected next Q values (for Expected SARSA target)
-        with torch.no_grad():
-            next_q_values = agent.forward(next_state_batch)
+#         # Compute expected next Q values (for Expected SARSA target)
+#         with torch.no_grad():
+#             next_q_values = agent.forward(next_state_batch)
             
-            # Assuming the agent has a get_policy method that returns action probabilities
-            # If not available, we can estimate it from epsilon-greedy
-            expected_q_values = torch.zeros(self.batch_size).to(agent.device)
+#             # Assuming the agent has a get_policy method that returns action probabilities
+#             # If not available, we can estimate it from epsilon-greedy
+#             expected_q_values = torch.zeros(self.batch_size).to(agent.device)
             
-            # For each next state
-            for i in range(self.batch_size):
-                # Get all Q-values for this state
-                state_q_values = next_q_values[i]
+#             # For each next state
+#             for i in range(self.batch_size):
+#                 # Get all Q-values for this state
+#                 state_q_values = next_q_values[i]
                 
-                # Simple epsilon-greedy policy calculation
-                epsilon = agent.epsilon if hasattr(agent, 'epsilon') else 0.1
-                n_actions = state_q_values.size(0)
+#                 # Simple epsilon-greedy policy calculation
+#                 epsilon = agent.epsilon if hasattr(agent, 'epsilon') else 0.1
+#                 n_actions = state_q_values.size(0)
                 
-                # Probability of random action is epsilon/n_actions for each action
-                # Probability of greedy action is (1-epsilon) + epsilon/n_actions
-                probs = torch.ones(n_actions) * epsilon / n_actions
-                best_action = state_q_values.argmax().item()
-                probs[best_action] += (1 - epsilon)
+#                 # Probability of random action is epsilon/n_actions for each action
+#                 # Probability of greedy action is (1-epsilon) + epsilon/n_actions
+#                 probs = torch.ones(n_actions) * epsilon / n_actions
+#                 best_action = state_q_values.argmax().item()
+#                 probs[best_action] += (1 - epsilon)
                 
-                # Expected value is sum of q_values * probabilities
-                expected_q_values[i] = (state_q_values * probs.to(agent.device)).sum()
+#                 # Expected value is sum of q_values * probabilities
+#                 expected_q_values[i] = (state_q_values * probs.to(agent.device)).sum()
             
-            # Set expected Q-value to 0 for terminal states
-            expected_q_values = expected_q_values * (1 - done_batch)
+#             # Set expected Q-value to 0 for terminal states
+#             expected_q_values = expected_q_values * (1 - done_batch)
             
-            # Compute Expected SARSA target: r + γ * E[Q(s', a')]
-            expected_sarsa_targets = reward_batch + (self.gamma * expected_q_values)
+#             # Compute Expected SARSA target: r + γ * E[Q(s', a')]
+#             expected_sarsa_targets = reward_batch + (self.gamma * expected_q_values)
         
-        # Compute loss and update
-        loss = self.loss_fn(q_values, expected_sarsa_targets)
-        reg_loss = agent.get_metrics().get('criticality_loss')
-        if reg_loss is not None:
-            loss += reg_loss
-        self.optimizer.zero_grad()
-        loss.backward()
-        for param in agent.parameters():
-            if param.grad is not None:
-                param.grad.data.clamp_(-1, 1)
-        self.optimizer.step()
+#         # Compute loss and update
+#         loss = self.loss_fn(q_values, expected_sarsa_targets)
+#         reg_loss = agent.get_metrics().get('criticality_loss')
+#         if reg_loss is not None:
+#             loss += reg_loss
+#         self.optimizer.zero_grad()
+#         loss.backward()
+#         for param in agent.parameters():
+#             if param.grad is not None:
+#                 param.grad.data.clamp_(-1, 1)
+#         self.optimizer.step()

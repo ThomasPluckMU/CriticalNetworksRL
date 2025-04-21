@@ -112,7 +112,7 @@ class TDLogic(TrainingLogic):
             # Compute TD target: r + γ * max_a' Q(s', a')
             td_targets = reward_batch + (self.gamma * next_max)        
         # Compute loss
-        loss = self.loss_fn(q_values, td_targets)
+        loss = self.loss_fn(q_values, td_targets) * 1e3
         reg_loss = agent.get_metrics().get('criticality_loss')
         if reg_loss is not None:
             loss += reg_loss

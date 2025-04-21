@@ -24,17 +24,15 @@ class DiracRewardLogic(TrainingLogic):
             memory.push(state, action, next_state, reward, done, 'single')
             state = next_state
             total_reward += reward
-            # Only compute loss and update if there's a reward
-            if reward != 0:
-                # Re-compute q_values for training (creating a new computation graph)
-                q_values = agent.forward(state_tensor)
-                normalized_q = q_values/torch.norm(q_values)
-                target = reward*normalized_q.detach()  # Detach target to avoid double backprop
-                reg_loss = agent.get_metrics().get('criticality_loss')
-                loss = self.loss_fn(normalized_q, target) * 1e7
-                if reg_loss is not None:
-                    loss += reg_loss
-                self.step_optimizer(loss)
+            # Re-compute q_values for training (creating a new computation graph)
+            q_values = agent.forward(state_tensor)
+            normalized_q = q_values/torch.norm(q_values)
+            target = reward*normalized_q.detach()  # Detach target to avoid double backprop
+            reg_loss = agent.get_metrics().get('criticality_loss')
+            loss = self.loss_fn(normalized_q, target)
+            if reg_loss is not None:
+                loss += reg_loss
+            self.step_optimizer(loss)
     
         return total_reward, {
             'game': 'single',
