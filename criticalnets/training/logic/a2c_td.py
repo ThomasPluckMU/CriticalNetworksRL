@@ -5,6 +5,7 @@ from torch.distributions import Categorical
 from torch.optim import Adam
 from . import TrainingLogic
 
+
 class A2CLogic(TrainingLogic):
     """
     Synchronous Advantage Actor-Critic logic:
@@ -12,25 +13,18 @@ class A2CLogic(TrainingLogic):
       - Compute discounted returns and advantages
       - Single optimization step per full episode
     """
-    def __init__(self,
-                 gamma: float = 0.99,
-                 lr: float = 7e-4,
-                 value_coef: float = 0.5,
-                 entropy_coef: float = 0.01):
-        self.gamma = gamma
-        self.lr = lr
-        self.value_coef = value_coef
-        self.entropy_coef = entropy_coef
 
-    def configure_optimizer(self, network: Any, **kwargs) -> Adam:
+    def __init__(self, config):
+        self.gamma = config.get("gamma", 0.99)
+        self.lr = config.get("lr", 7e-4)
+        self.value_coef = config.get("value_coef", 0.5)
+        self.entropy_coef = config.get("entropy_coef", 0.01)
+
+    def configure_optimizer(self, network: Any) -> Adam:
         self.optimizer = Adam(network.parameters(), lr=self.lr)
         return self.optimizer
 
-    def run_episode(self,
-                    env,
-                    agent,
-                    memory,
-                    episode_idx: int) -> Tuple[float, Dict]:
+    def run_episode(self, env, agent, memory, episode_idx: int) -> Tuple[float, Dict]:
         # Buffers for trajectory
         obs_buf, act_buf, logp_buf, val_buf, rew_buf = [], [], [], [], []
 
@@ -91,11 +85,12 @@ class A2CLogic(TrainingLogic):
         self.optimizer.step()
 
         return total_reward, {
-            'game': 'single',
-            'steps': len(obs_buf),
-            'reward': total_reward,
-            'policy_loss': policy_loss.item(),
-            'value_loss': value_loss.item(),
-            'entropy': ent_loss.item(),
-            'metrics': agent.get_metrics()
+            "game": "single",
+            "steps": len(obs_buf),
+            "reward": total_reward,
+            "policy_loss": policy_loss.item(),
+            "value_loss": value_loss.item(),
+            "entropy": ent_loss.item(),
+            "metrics": agent.get_metrics(),
+            "loss": policy_loss.item() + value_loss.item(),
         }

@@ -8,38 +8,30 @@ from . import TrainingLogic
 from ...agents.ppo import PPOAgent
 
 
-
-
 class PPOLogic(TrainingLogic):
     """
     Proximal Policy Optimization training logic
     """
-    def __init__(self,
-                 lr: float=2.5e-4,
-                 gamma: float=0.99,
-                 clip_eps: float=0.1,
-                 entropy_coef: float=0.01,
-                 value_coef: float=0.5,
-                 rollout_length: int=128,
-                 epochs: int=4,
-                 batch_size: int=32):
-        self.lr = lr
-        self.gamma = gamma
-        self.clip_eps = clip_eps
-        self.entropy_coef = entropy_coef
-        self.value_coef = value_coef
-        self.rollout_length = rollout_length
-        self.epochs = epochs
-        self.batch_size = batch_size
+
+    def __init__(self, config):
+        self.lr = config.get("lr", 25e-5)
+        self.gamma = config.get("gamma", 0.99)
+        self.clip_eps = config.get("clip_eps", 0.1)
+        self.entropy_coef = config.get("entropy_coef", 0.01)
+        self.value_coef = config.get("value_coef", 0.5)
+        self.rollout_length = config.get("rollout_length", 128)
+        self.epochs = config.get("epochs", 4)
+        self.batch_size = config.get("batch_size", 32)
         self.optimizer = None
 
-    def configure_optimizer(self, agent: PPOAgent, **kwargs):
-            # take override if user passed lr in config, else use self.lr
-            lr = kwargs.pop('lr', self.lr)
-            self.optimizer = optim.Adam(agent.parameters(), lr=lr, **kwargs)
-            return self.optimizer
+    def configure_optimizer(self, agent: PPOAgent):
+        # take override if user passed lr in config, else use self.lr
+        self.optimizer = optim.Adam(agent.parameters(), lr=self.lr)
+        return self.optimizer
 
-    def run_episode(self, env, agent: PPOAgent, memory, episode_idx) -> Tuple[float, Dict]:
+    def run_episode(
+        self, env, agent: PPOAgent, memory, episode_idx
+    ) -> Tuple[float, Dict]:
         state, _ = env.reset()
         done = False
         total_reward = 0.0
@@ -76,7 +68,13 @@ class PPOLogic(TrainingLogic):
                     break  # Exit inner loop immediately on actual termination
 
             # Compute GAE and returns for collected rollout
-            last_val = 0 if done else agent.forward(torch.from_numpy(state).float().unsqueeze(0).to(agent.device))[1].item()
+            last_val = (
+                0
+                if done
+                else agent.forward(
+                    torch.from_numpy(state).float().unsqueeze(0).to(agent.device)
+                )[1].item()
+            )
 
             returns, advs = [], []
             gae = 0
@@ -93,13 +91,15 @@ class PPOLogic(TrainingLogic):
             actions_t = torch.tensor(actions, dtype=torch.int64).to(agent.device)
             old_logp_t = torch.stack(log_probs)
             returns_t = torch.tensor(returns).float().to(agent.device)
-            advs_t = (torch.tensor(advs).float().to(agent.device) - returns_t.mean()) / (returns_t.std() + 1e-8)
+            advs_t = (
+                torch.tensor(advs).float().to(agent.device) - returns_t.mean()
+            ) / (returns_t.std() + 1e-8)
 
             # PPO update epochs
             for _ in range(self.epochs):
                 idxs = np.random.permutation(len(states))
                 for start in range(0, len(states), self.batch_size):
-                    batch_idx = idxs[start:start+self.batch_size]
+                    batch_idx = idxs[start : start + self.batch_size]
                     b_states = states_t[batch_idx]
                     b_actions = actions_t[batch_idx]
                     b_old_logp = old_logp_t[batch_idx]
@@ -112,7 +112,10 @@ class PPOLogic(TrainingLogic):
                     ratio = torch.exp(logp - b_old_logp)
 
                     surr1 = ratio * b_advs
-                    surr2 = torch.clamp(ratio, 1 - self.clip_eps, 1 + self.clip_eps) * b_advs
+                    surr2 = (
+                        torch.clamp(ratio, 1 - self.clip_eps, 1 + self.clip_eps)
+                        * b_advs
+                    )
 
                     policy_loss = -torch.min(surr1, surr2).mean()
                     # Ensure both vals and b_returns have the same shape
@@ -120,20 +123,24 @@ class PPOLogic(TrainingLogic):
                     b_returns = b_returns.view(-1)
 
                     # Confirm sizes match exactly before computing loss
-                    assert vals.shape == b_returns.shape, f"vals shape {vals.shape} vs b_returns shape {b_returns.shape}"
+                    assert (
+                        vals.shape == b_returns.shape
+                    ), f"vals shape {vals.shape} vs b_returns shape {b_returns.shape}"
 
                     value_loss = F.mse_loss(vals, b_returns)
 
                     entropy = dist.entropy().mean()
-                    loss = policy_loss + self.value_coef * value_loss - self.entropy_coef * entropy
+                    loss = (
+                        policy_loss
+                        + self.value_coef * value_loss
+                        - self.entropy_coef * entropy
+                    )
 
                     self.optimizer.zero_grad()
                     loss.backward()
                     nn.utils.clip_grad_norm_(agent.parameters(), max_norm=0.5)
                     self.optimizer.step()
-                    #print("loss:", loss.item())
-
-                    
+                    # print("loss:", loss.item())
 
             # Clear buffers after update
             states.clear()
@@ -143,7 +150,14 @@ class PPOLogic(TrainingLogic):
             log_probs.clear()
             values.clear()
 
-        metrics = {'policy_loss': policy_loss.item(),
-                'value_loss': value_loss.item(),
-                'entropy': entropy.item()}
-        return total_reward, {'metrics': metrics, 'steps': len(states), 'reward': total_reward}
+        metrics = {
+            "policy_loss": policy_loss.item(),
+            "value_loss": value_loss.item(),
+            "entropy": entropy.item(),
+        }
+        return total_reward, {
+            "metrics": metrics,
+            "steps": len(states),
+            "reward": total_reward,
+            "loss": loss,
+        }

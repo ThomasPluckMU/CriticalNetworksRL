@@ -4,16 +4,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 from . import BaseAtariAgent
 
+
 class PongA2CAgent(BaseAtariAgent):
     """
     Advantage Actor-Critic (A2C) agent specialized for Pong (6 actions).
     Uses a shared conv backbone with separate actor and critic heads.
     """
+
     def __init__(self, config: Dict, action_space: int):
         # Always force 6 actions for Pong regardless of passed action_space
         super().__init__(config, action_space=6)
-        self.device = torch.device(config.get('device', 'cpu'))
-        self.frame_stack = config.get('frame_stack', 4)
+        self.device = torch.device(config.get("device", "cpu"))
+        self.frame_stack = config.get("frame_stack", 4)
 
         # Convolutional layers
         self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4)
@@ -38,10 +40,10 @@ class PongA2CAgent(BaseAtariAgent):
 
         # Frame stacking
         if x.size(1) == 3 and self.frame_stack > 1:
-            x = x.repeat(1, self.frame_stack // 3 + 1, 1, 1)[:, :self.frame_stack]
+            x = x.repeat(1, self.frame_stack // 3 + 1, 1, 1)[:, : self.frame_stack]
         # Resize
         if x.size(-2) != 84 or x.size(-1) != 84:
-            x = F.interpolate(x, size=(84, 84), mode='bilinear', align_corners=False)
+            x = F.interpolate(x, size=(84, 84), mode="bilinear", align_corners=False)
 
         # Conv backbone
         x = F.relu(self.conv1(x))
@@ -63,9 +65,7 @@ class PongA2CAgent(BaseAtariAgent):
         return dist.sample().item()
 
     def evaluate_actions(
-        self,
-        states: torch.Tensor,
-        actions: torch.Tensor
+        self, states: torch.Tensor, actions: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         logits, values = self.forward(states)
         dist = torch.distributions.Categorical(logits=logits)

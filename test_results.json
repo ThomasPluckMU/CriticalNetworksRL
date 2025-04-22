@@ -1,8 +1,0 @@
-{
-  "Breakout-v4_GatedAtariUDQN": {
-    "status": "PASSED"
-  },
-  "Pong-v4_GatedAtariUDQN": {
-    "status": "PASSED"
-  }
-}

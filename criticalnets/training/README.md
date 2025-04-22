@@ -1,38 +1,55 @@
 # Training Module
 
-## 1. What is this module?
-This module provides training infrastructure for Atari agents. Key components:
-- `MultiGameTrainer`: Handles training across multiple games
+## Trainer Classes
+- `BaseTrainer`: Core training infrastructure
+  - Environment management
+  - Checkpoint saving
+  - Memory buffer
+  - Keyboard controls
 - `SingleGameTrainer`: Specialized for single-game training
-- Training logic implementations (see training/logic/README.md)
+  - Target network for stability
+  - Progress tracking
+  - Reward/loss logging
+- `MultiGameTrainer`: Handles training across multiple games
 
-## 2. How to use it
+## Training Logic Implementations
+Available algorithms:
+- `TD`: Temporal Difference learning
+- `SARSA`: State-Action-Reward-State-Action
+- `A2C_TD`: Advantage Actor-Critic with TD
+- `PPO_TD`: Proximal Policy Optimization with TD
+- `DirectReward`: Direct reward optimization
+- `MultiGameLogic`: Multi-game training with switching
+
+## Usage Example
 ```python
-from criticalnets.training import MultiGameTrainer
-from criticalnets.agents import GatedAtariUDQN
-from criticalnets.training.logic import MultiGameLogic
+from criticalnets.training import SingleGameTrainer
+from criticalnets.agents import CriticalAtariDQN
+from criticalnets.training.logic import TD
 
-# Create trainer
-trainer = MultiGameTrainer(
-    config={...},
-    logic=MultiGameLogic(),
-    agent_cls=GatedAtariUDQN
-)
-
-# Start training
-trainer.train()
-```
-
-## 3. How to customize training
-To customize training behavior:
-1. Configure via the config dictionary (memory size, render settings, etc.)
-2. Implement custom training logic (see training/logic/README.md)
-3. Extend existing trainers or create new ones
-
-Example config:
-```python
+# Configure training
 config = {
     'memory_size': 100000,
-    'render': True,
-    'save_dir': 'custom_checkpoints'
+    'render': False,
+    'save_dir': 'checkpoints',
+    'lr': 0.0001,
+    'debug': True
 }
+
+# Create trainer with TD learning
+trainer = SingleGameTrainer(
+    config=config,
+    logic=TD(),
+    agent_cls=CriticalAtariDQN
+)
+
+# Train on Pong
+trainer.train("ALE/Pong-v5", episodes=1000)
+```
+
+## Key Features
+- **Checkpointing**: Automatic model saving
+- **Logging**: Episode rewards and debug metrics
+- **Memory**: Experience replay buffer
+- **Visualization**: Real-time training progress
+- **Customization**: Extensible trainer and logic

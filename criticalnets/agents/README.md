@@ -1,42 +1,74 @@
 # Agents Module
 
-## 1. What is this module?
-This module contains implementations of Atari game agents that inherit from `BaseAtariAgent`. It provides:
-- A base class (`BaseAtariAgent`) that defines the interface all agents must implement
-- Automatic discovery and registration of agent implementations
-- A registry system to look up agent classes by name
+## Available Agents
 
-## 2. How to use it
+### Value-Based Agents
+- `CriticalAtariDQN`: DQN with critical network regularization
+  - 3 CNN layers + FC
+  - Tanh activations
+  - Jacobian norm regularization
+- `DynamicAtariUDQN`: Uncertainty-aware DQN
+- `GatedAtariUDQN`: Gated version with uncertainty
+- `StandardDQN`: Basic Deep Q-Network
+
+### Policy-Based Agents
+- `PongA2CAgent`: Advantage Actor-Critic for Pong
+- `PPOAgent`: Proximal Policy Optimization
+- `CriticalGatedAgent`: Gated policy with critical features
+
+## BaseAtariAgent Features
+```mermaid
+classDiagram
+    class BaseAtariAgent {
+        +activations: dict
+        +gradients: dict
+        +loss: float
+        +register_activation_probes()
+        +set_loss()
+        +get_metrics()
+        +get_param_schema()
+        +validate_config()
+    }
+```
+
+## CriticalAtariDQN Architecture
+```mermaid
+graph TD
+    Input[84x84x4 Frame] --> Conv1[8x8 Conv, stride 4]
+    Conv1 --> Tanh1[Tanh]
+    Tanh1 --> Conv2[4x4 Conv, stride 2] 
+    Conv2 --> Tanh2[Tanh]
+    Tanh2 --> Conv3[3x3 Conv, stride 1]
+    Conv3 --> Tanh3[Tanh]
+    Tanh3 --> Flatten
+    Flatten --> FC[512-unit FC]
+    FC --> Sigmoid
+    Sigmoid --> Head[Action Q-values]
+```
+
+## Usage Examples
+
+### Basic Usage
 ```python
 from criticalnets.agents import get_agent_class
 
-# Get an agent class by name
-AgentClass = get_agent_class('GatedAtariUDQN')
+agent_class = get_agent_class('CriticalAtariDQN')
+agent = agent_class(config={
+    'device': 'cuda',
+    'frame_stack': 4,
+    'reg_strength': 1.0
+}, action_space=6)
 
-# Create an agent instance
-agent = AgentClass(config, action_space)
-
-# Use the agent
-q_values = agent(state_tensor)
+q_values = agent(state_tensor)  # Get action values
 ```
 
-## 3. How to add new agents
-To add a new agent:
-1. Create a new Python file in this directory
-2. Implement a class that inherits from `BaseAtariAgent`
-3. Implement the required `forward()` method
-4. The agent will be automatically discovered and registered
-
-Example minimal agent:
+### Monitoring
 ```python
-from . import BaseAtariAgent
-import torch.nn as nn
+# Track specific layer activations
+agent.register_activation_probes(['conv1', 'conv2'])
 
-class MyNewAgent(BaseAtariAgent):
-    def __init__(self, config, action_space):
-        super().__init__(config, action_space)
-        # Define your network layers here
-        
-    def forward(self, x):
-        # Implement forward pass
-        return q_values
+# After forward pass:
+print(agent.activations['conv1'].shape)  # Activation tensor
+print(agent.gradients['conv1.weight'])  # Parameter gradients
+```
+

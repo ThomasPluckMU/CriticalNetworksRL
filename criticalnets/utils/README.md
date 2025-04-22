@@ -1,35 +1,72 @@
 # Utils Module
 
-## 1. What is this module?
-This module provides utility functions and classes for Atari reinforcement learning. Key features:
-- `ReplayMemory`: Experience replay buffer implementation
-- `preprocess_frame()`: Frame preprocessing for Atari games
-- `KeyboardController`: Interactive rendering speed control
+## Core Utilities
 
-## 2. How to use it
+### ReplayMemory
 ```python
-from criticalnets.utils import ReplayMemory, preprocess_frame
+from criticalnets.utils import ReplayMemory
 
-# Create replay memory
 memory = ReplayMemory(capacity=10000)
-
-# Preprocess frames
-processed_frame = preprocess_frame(raw_frame)
-
-# Use keyboard controls (optional)
-controller = KeyboardController()
-controller.start()
+memory.push(state, action, next_state, reward, done, game_id)
+batch = memory.sample(32)  # Returns Transition tuples
 ```
 
-## 3. How to add new utilities
-To add new utility functions:
-1. Create a new function or class in the appropriate file
-2. Add any necessary imports
-3. Document the functionality clearly
-
-Example utility function:
+### Frame Processing
 ```python
-def normalize_rewards(rewards: List[float]) -> List[float]:
-    """Normalize rewards to [-1, 1] range"""
-    max_reward = max(abs(r) for r in rewards)
-    return [r/max_reward for r in rewards]
+from criticalnets.utils import preprocess_frame
+
+# Convert RGB to grayscale, crop, downsample
+processed = preprocess_frame(raw_frame)  # (84, 84) float32 [0,1]
+```
+
+### Keyboard Controls
+```python
+from criticalnets.utils import KeyboardController
+
+controller = KeyboardController(initial_delay=0.01)
+controller.start()  # Runs in background thread
+# Use +/- to adjust render speed
+controller.stop()
+```
+
+## Numerical Helpers
+
+### Criticality Regularization
+Calculates Edge of Chaos regularization term:
+```
+R(layer) = (2σ′(z)∇²ₓσ(z)/√N) * (1/N - 1/||∇ₓσ(z)||)
+```
+
+Usage:
+```python
+from criticalnets.utils.numerical_helpers import (
+    criticality_regularization,
+    get_activation_derivatives
+)
+
+# For a conv layer:
+reg_loss = criticality_regularization(
+    model=conv_layer,
+    x=input_tensor,
+    activation_func=torch.tanh,
+    layer_type='conv'
+)
+```
+
+### Jacobian/Laplacian
+```python
+jacobian = compute_jacobian_approximation(model, x, activation_func)
+laplacian = compute_laplacian_approximation(model, x, activation_func)
+```
+
+## Adding New Utilities
+1. Add to appropriate file:
+   - `atari_helpers.py`: Game-specific utilities
+   - `numerical_helpers.py`: Math operations
+2. Follow existing patterns:
+```python
+def new_utility(param: type) -> return_type:
+    """Docstring explaining purpose and math"""
+    # Implementation
+    return result
+```

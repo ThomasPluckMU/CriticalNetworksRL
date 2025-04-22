@@ -1,23 +1,19 @@
+from typing import Dict
+import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import random
-import numpy as np
-from typing import Dict
 from . import BaseAtariAgent
+from criticalnets.layers import GatedDynamicBiasCNN
 
 from ..utils.numerical_helpers import criticality_regularization
 
 
-class CriticalAgent(BaseAtariAgent):
-    """
-    Atari agent implementing the Edge of Chaos regularization from the paper.
-    This agent aims to maintain network criticality by constraining the Jacobian norm.
-    """
+class GatedCriticalAtariUDQN(BaseAtariAgent):
 
     def __init__(self, config: Dict, action_space: int):
         """
-        Initialize the Critical Agent network
+        Initialize the Gated DQN network with dynamic bias layers and criticality regularization
 
         Args:
             config (Dict): Configuration dictionary
@@ -29,12 +25,13 @@ class CriticalAgent(BaseAtariAgent):
         self.reg_strength = config.get("reg_strength", 1e0)
         self.epsilon = config.get("epsilon", 0.1)
 
-        # Define standard convolutional layers (without dynamic bias)
-        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-
+        # Define the activation function
         self.activation_function = F.tanh
+
+        # Define the convolutional layers with gated dynamic bias
+        self.conv1 = GatedDynamicBiasCNN(self.frame_stack, 32, kernel_size=8, stride=4)
+        self.conv2 = GatedDynamicBiasCNN(32, 64, kernel_size=4, stride=2)
+        self.conv3 = GatedDynamicBiasCNN(64, 64, kernel_size=3, stride=1)
 
         # Fully connected layers - will be initialized after first forward pass
         self.fc = None
@@ -44,9 +41,34 @@ class CriticalAgent(BaseAtariAgent):
         self.saved_activations = {}
         self.saved_inputs = {}
 
+        # Initialize the output shapes for the conv layers
+        self._initialize_network()
+
+    def _initialize_network(self):
+        """Initialize the network by setting up the output shapes for convolutional layers"""
+        # Use actual expected input dimensions (84x84 after resizing)
+        dummy_input = torch.zeros(1, self.frame_stack, 84, 84)
+
+        # Initialize conv1 with proper input dimensions
+        self.conv1._initialize_parameters(dummy_input)
+
+        # Get actual output dimensions from conv1
+        with torch.no_grad():
+            conv1_out = self.conv1(dummy_input)
+
+        # Initialize conv2 with actual conv1 output dimensions
+        self.conv2._initialize_parameters(conv1_out)
+
+        # Get actual output dimensions from conv2
+        with torch.no_grad():
+            conv2_out = self.conv2(conv1_out)
+
+        # Initialize conv3 with actual conv2 output dimensions
+        self.conv3._initialize_parameters(conv2_out)
+
     def forward(self, x):
         """
-        Forward pass through the network
+        Forward pass through the network with activation tracking for criticality
 
         Args:
             x: Input tensor of shape (batch_size, height, width, channels)
@@ -75,7 +97,7 @@ class CriticalAgent(BaseAtariAgent):
         # Save input for regularization
         self.saved_inputs["input"] = x
 
-        # First convolutional layer with self.activation_function
+        # First convolutional layer with activation tracking
         z1 = self.conv1(x)
         self.saved_activations["conv1"] = {
             "x": x,
@@ -85,7 +107,7 @@ class CriticalAgent(BaseAtariAgent):
         }
         a1 = self.activation_function(z1)
 
-        # Second convolutional layer with self.activation_function
+        # Second convolutional layer with activation tracking
         z2 = self.conv2(a1)
         self.saved_activations["conv2"] = {
             "x": a1,
@@ -95,7 +117,7 @@ class CriticalAgent(BaseAtariAgent):
         }
         a2 = self.activation_function(z2)
 
-        # Third convolutional layer with self.activation_function
+        # Third convolutional layer with activation tracking
         z3 = self.conv3(a2)
         self.saved_activations["conv3"] = {
             "x": a2,
@@ -112,34 +134,38 @@ class CriticalAgent(BaseAtariAgent):
             # Initialize fc layer with correct input size
             self.fc = nn.Linear(x_flat.size(1), 512).to(self.device)
 
-        # Fully connected layer
+        # Fully connected layer with activation tracking
         z4 = self.fc(x_flat)
         self.saved_activations["fc"] = {
             "x": x_flat,
             "z": z4,
-            "a": F.sigmoid(z4),
+            "a": torch.sigmoid(z4),
             "model": self.fc,
         }
-        a4 = F.sigmoid(z4)
+        a4 = torch.sigmoid(z4)
 
         # Output layer
-        output = self.head(a4)
+        return self.head(a4)
 
-        return output
+    def reset_bias(self):
+        """Reset the bias maps for all dynamic bias layers in the network"""
+        for module in self.children():
+            if hasattr(module, "reset_bias"):
+                module.reset_bias()
 
     def act(self, state):
         """Select action using epsilon-greedy policy"""
         if random.random() < self.epsilon:
-            # Return random valid action (0-3 for Breakout)
+            # Return random valid action
             return random.randint(0, 5)
         with torch.no_grad():
             q_values = self.forward(state.unsqueeze(0))
-            # Get top action and clamp to Breakout's action space (0-3)
+            # Get top action within the valid action space
             return min(q_values.argmax().item(), 5)
 
     def get_metrics(self):
         """
-        Get metrics for this agent
+        Get metrics for this agent, including criticality metrics
 
         Returns:
             Dictionary of metrics
@@ -164,16 +190,58 @@ class CriticalAgent(BaseAtariAgent):
                     N = z.size(1)
                     ltype = "fc"
 
-                # Compute approximation of Jacobian norm
+                # Compute criticality regularization
                 activation_func = (
-                    self.activation_function if name != "fc" else F.sigmoid
+                    self.activation_function if name != "fc" else torch.sigmoid
                 )
-                # Calculate how close we are to N
                 criticality_total += criticality_regularization(
                     model, x, activation_func, ltype
                 )
 
         # Convert tensor to scalar for logging
-        metrics[f"criticality_loss"] = self.reg_strength * criticality_total.item()
+        metrics["criticality_loss"] = self.reg_strength * criticality_total.item()
 
         return metrics
+
+    def compute_loss(self, *args, **kwargs):
+        """
+        Compute loss with criticality regularization
+
+        Returns:
+            Total loss with criticality regularization
+        """
+        # Compute the standard loss
+        base_loss = (
+            super().compute_loss(*args, **kwargs)
+            if hasattr(super(), "compute_loss")
+            else 0
+        )
+
+        # Add criticality metrics
+        criticality_total = 0
+        for name, saved in self.saved_activations.items():
+            if name in ["conv1", "conv2", "conv3", "fc"]:
+                # Ensure tensors have gradients preserved
+                z = saved["z"]
+                x = saved["x"]
+                model = saved["model"]
+
+                # For all layers
+                # Set layer type for criticality function
+                if name in ["conv1", "conv2", "conv3"]:
+                    ltype = name[:-1]
+                else:  # 'fc'
+                    ltype = "fc"
+
+                # Compute criticality regularization
+                activation_func = (
+                    self.activation_function if name != "fc" else torch.sigmoid
+                )
+                criticality_total += criticality_regularization(
+                    model, x, activation_func, ltype
+                )
+
+        # Add regularization term to the loss
+        total_loss = base_loss + self.reg_strength * criticality_total
+
+        return total_loss

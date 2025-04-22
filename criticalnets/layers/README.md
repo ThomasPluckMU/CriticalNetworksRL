@@ -1,47 +1,74 @@
 # Layers Module
 
-## 1. What is this module?
-This module provides dynamic bias neural network layers that maintain evolving bias states. Key features:
-- Base class (`DynamicBiasBase`) for all dynamic bias layers
-- Standard NN layers with dynamic bias (`DynamicBiasNN`, `GatedDynamicBiasNN`, `DeadWeightDynamicBiasNN`)
-- CNN versions (`DynamicBiasCNN`, `GatedDynamicBiasCNN`, `DeadWeightDynamicBiasCNN`)
-- Automatic bias state management and reset capabilities
+## Available Layer Types
+1. **Dynamic Bias Layers**:
+   - `DynamicBiasNN`: Fully-connected layer with dynamic bias (SELU activation)
+   - `DynamicBiasCNN`: Convolutional layer with dynamic bias (Tanh activation)
+   - `GatedDynamicBiasNN`: Gated version of dynamic bias NN
+   - `ConvDynamicBias`: Convolutional version with spatial bias updates
 
-## 2. How to use it
+## Key Features
+- Velocity-based bias updates during forward pass
+- Automatic bias state management
+- Configurable bias decay rates
+- Different activation functions per layer type
+- Reset capabilities between sequences
+
+## Usage Examples
+
+### DynamicBiasNN (Fully-connected)
 ```python
 from criticalnets.layers import DynamicBiasNN
 
-# Create a dynamic bias layer
-layer = DynamicBiasNN(input_size=64, hidden_size=128)
+layer = DynamicBiasNN(
+    input_size=64,
+    hidden_size=128,
+    velocity_init=0.1,  # Initial update rate
+    bias_decay=0.9      # Bias retention rate
+)
 
-# Forward pass (automatically updates bias state)
-output = layer(input_tensor)
-
-# Reset bias state between sequences
-layer.reset_bias()
+output = layer(input_tensor)  # Automatically updates bias
+layer.reset_bias()            # Reset between sequences
 ```
 
-## 3. How to add new layers
-To create a new dynamic bias layer:
-1. Inherit from `DynamicBiasBase`
-2. Implement the `forward()` method
-3. Optionally override `_init_bias()` for custom bias initialization
-4. Add any additional parameters needed for your bias update logic
+### DynamicBiasCNN (Convolutional)
+```python
+from criticalnets.layers import DynamicBiasCNN
 
-Example minimal layer:
+layer = DynamicBiasCNN(
+    in_channels=3,
+    out_channels=32,
+    kernel_size=3,
+    velocity_init=0.05,
+    bias_decay=0.95
+)
+
+output = layer(image_batch)  # Updates spatial bias maps
+```
+
+## Implementation Details
+All layers implement:
+- `forward()`: Computes output and updates bias
+- `reset_bias()`: Resets bias state
+- Velocity parameter controls update magnitude
+- Bias decay controls how much previous bias is retained
+
+## Adding New Layers
+1. Inherit from base class
+2. Implement required methods:
 ```python
 from .dynamic_bias import DynamicBiasBase
 import torch.nn as nn
 
-class MyDynamicLayer(DynamicBiasBase):
-    def __init__(self, input_size, hidden_size):
+class CustomDynamicLayer(DynamicBiasBase):
+    def __init__(self, input_size, hidden_size, custom_param=0.1):
         super().__init__(input_size, hidden_size)
         self.linear = nn.Linear(input_size, hidden_size)
+        self.custom_param = nn.Parameter(torch.tensor(custom_param))
         
     def forward(self, x):
-        if self.current_bias is None:
-            self.current_bias = self._init_bias(x.size(0))
-            
+        # Your custom bias update logic here
         output = self.linear(x) + self.current_bias
-        self.current_bias = ... # Your update logic here
+        self.current_bias = ... # Update bias
         return output
+```
