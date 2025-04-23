@@ -1,4 +1,4 @@
-r# Configuration System
+# Configuration System
 
 ## Overview
 The config handler provides:
