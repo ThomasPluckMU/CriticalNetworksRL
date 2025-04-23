@@ -1,6 +1,6 @@
 trainer: "SingleGameTrainer"
 game: "ALE/Pong-v5"
-device: "cuda:0"
+device: "cuda:1"
 episodes: 5000
 render: false
 debug: true
