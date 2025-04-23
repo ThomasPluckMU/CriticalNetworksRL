@@ -16,8 +16,10 @@ A reinforcement learning framework implementing Edge of Chaos theory for trainin
 The framework implements Edge of Chaos theory by:
 1. Calculating Jacobian norms for each layer
 2. Applying regularization to maintain critical dynamics:
-   \[\mathcal{R}_{layer} = \dfrac{2\sigma'(z)\nabla^2_x\sigma(z)}{\sqrt{N}} \left(\dfrac1N - \dfrac{1}{\|\nabla_x\sigma(z)\|}\right)\]
-3. Optimizing networks to operate near phase transitions
+   
+   $$\mathcal{R}_{layer} = \dfrac{2\sigma'(z)\nabla^2_x\sigma(z)}{\sqrt{N}} \left(\dfrac1N - \dfrac{1}{\|\nabla_x\sigma(z)\|}\right)$$
+   
+4. Optimizing networks to operate near phase transitions
 
 ## Installation
 
