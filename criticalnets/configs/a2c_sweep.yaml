@@ -8,7 +8,7 @@ save_dir: "logs"
 log_dir: "logs"
 
 agents:
-  A2CAgent:
+  PongA2CAgent:
     logics:
       A2CLogic:
         logic_params:
