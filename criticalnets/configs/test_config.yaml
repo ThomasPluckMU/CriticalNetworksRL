@@ -1,0 +1,52 @@
+trainer: "SingleGameTrainer"
+game: "ALE/Pong-v5"
+episodes: 2
+render: false
+debug: true
+save_dir: "logs"
+log_dir: "logs"
+
+agents:
+  PongA2CAgent:
+    logics:
+      A2CLogic:
+        logic_params:
+          gamma: [0.99]
+
+  PPOAgent:
+    agent_params:
+      epsilon: [0.1]
+    logics:
+      PPOLogic:
+        logic_params:
+          gamma: [0.99]
+
+  StandardAtariDQN:
+    logics:
+      TDLogic:
+        logic_params:
+          batch_size: [1,16,32]
+
+  CriticalAgent:
+    logics:
+      TDLogic:
+        logic_params:
+          batch_size: [1,16,32]
+          
+  GatedAtariUDQN:
+    logics:
+      TDLogic:
+        logic_params:
+          batch_size: [1,16,32]
+
+  DynamicAtariUDQN:
+    logics:
+      TDLogic:
+        logic_params:
+          batch_size: [1,16,32]
+
+  GatedCriticalAtariUDQN:
+    logics:
+      TDLogic:
+        logic_params:
+          batch_size: [1,16,32]

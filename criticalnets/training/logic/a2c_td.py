@@ -88,9 +88,9 @@ class A2CLogic(TrainingLogic):
             "game": "single",
             "steps": len(obs_buf),
             "reward": total_reward,
-            "policy_loss": policy_loss.item(),
-            "value_loss": value_loss.item(),
-            "entropy": ent_loss.item(),
+            "policy_loss": policy_loss.detach().item(),
+            "value_loss": value_loss.detach().item(),
+            "entropy": ent_loss.detach().item(),
             "metrics": agent.get_metrics(),
-            "loss": policy_loss.item() + value_loss.item(),
+            "loss": policy_loss.detach().item() + value_loss.detach().item(),
         }

@@ -1,5 +1,6 @@
 trainer: "SingleGameTrainer"
 game: "ALE/Pong-v5"
+device: "cuda"
 episodes: 100
 render: false
 debug: true
@@ -97,7 +98,7 @@ agents:
           rescale: [1, 10, 100]
           lr: [0.001, 0.01, 0.1]
 
-  GatedCriticalAgentUDQN:
+  GatedCriticalAtariUDQN:
     agent_params:
       epsilon: [0.0, 0.05, 0.1]
       reg_strength: [0.001, 0.01, 0.1]

@@ -50,6 +50,18 @@ class DynamicBiasCNN(nn.Module):
         output_width = (
             (width + 2 * self.padding[1] - self.kernel_size[1]) // self.stride[1]
         ) + 1
+        
+        self.register_buffer(
+            "dynamic_bias",
+            0.5
+            + torch.zeros(
+                batch_size,
+                self.out_channels,
+                output_height,
+                output_width,
+                device=args[0].device,
+            ),
+        )
 
         self.velocity = nn.Parameter(
             torch.zeros(
@@ -64,25 +76,16 @@ class DynamicBiasCNN(nn.Module):
         return batch_size, in_channels, output_height, output_width
 
     def forward(self, x):
-        batch_size = x.shape[0]
-
-        # Convolutional layer output
-        a = self.conv(x) + self.bias
-
-        # Apply dynamic bias correction
-        # Broadcast velocity to match activation dimensions
-        velocity_expanded = self.velocity.expand(batch_size, -1, a.size(2), a.size(3))
-
+        
         # Apply the bias adjustment as in the NN implementation
-        z = a - velocity_expanded * a
-        activation = self.tanh(z)
+        current_bias = self.velocity * self.dynamic_bias
+        z = self.conv(x) + current_bias
 
         # Update bias in-place with no_grad to prevent tracking in backward pass
-        with torch.no_grad():
-            bias_update = velocity_expanded * activation
-            self.bias.data = self.bias.data - bias_update
+        if not torch.is_grad_enabled():
+            self.dynamic_bias = current_bias.detach().clone() + 1e-3
 
-        return activation
+        return self.tanh(z)
 
     def reset_bias(self):
         """Reset the current bias state"""

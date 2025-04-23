@@ -49,7 +49,6 @@ class DynamicBiasNN(DynamicBiasBase):
         nn.init.uniform_(self.bias, -bound, bound)  # Initialize bias properly
 
     def forward(self, x):
-        batch_size = x.shape[0]
 
         # Linear transformation
         a = torch.matmul(x, self.weight.t())

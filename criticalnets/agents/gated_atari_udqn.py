@@ -19,6 +19,7 @@ class GatedAtariUDQN(BaseAtariAgent):
         self.device = torch.device(config.get("device", "cpu"))
         self.frame_stack = config.get("frame_stack", 4)
         self.epsilon = config.get("epsilon", 0.1)
+        self.batch_size = config.get("batch_size", 32)
 
         # Define the convolutional layers with gated dynamic bias
         self.conv1 = GatedDynamicBiasCNN(self.frame_stack, 32, kernel_size=8, stride=4)
@@ -35,7 +36,7 @@ class GatedAtariUDQN(BaseAtariAgent):
     def _initialize_network(self):
         """Initialize the network by setting up the output shapes for convolutional layers"""
         # Use actual expected input dimensions (84x84 after resizing)
-        dummy_input = torch.zeros(1, self.frame_stack, 84, 84)
+        dummy_input = torch.zeros(self.batch_size, self.frame_stack, 84, 84)
 
         # Initialize conv1 with proper input dimensions
         self.conv1._initialize_parameters(dummy_input)

@@ -53,31 +53,18 @@ class GatedDynamicBiasCNN(DynamicBiasCNN):
         # Initialize velocity_conv weights
         nn.init.kaiming_uniform_(self.velocity_conv.weight, a=math.sqrt(5))
 
-        self.Tanh = nn.Tanh()
-
     def _initialize_parameters(self, *args, **kwargs):
         batch_size, in_channels, output_height, output_width = (
             super()._initialize_parameters(*args, **kwargs)
         )
-        # Use register_buffer instead of nn.Parameter to avoid gradient issues
-        self.register_buffer(
-            "dynamic_bias",
-            0.5
-            + torch.zeros(
-                batch_size,
-                self.out_channels,
-                output_height,
-                output_width,
-                device=args[0].device,
-            ),
-        )
+        
         return batch_size, in_channels, output_height, output_width
 
     def forward(self, x):
         # Store current dynamic bias for criticality calculations
         self._current_dynamic_bias = None
         # Calculate velocity using the velocity convolution
-        velocity = self.Tanh(self.velocity_conv(x))
+        velocity = self.tanh(self.velocity_conv(x))
         current_bias = self.dynamic_bias * velocity
         self._current_dynamic_bias = current_bias
         # Use the current bias for this forward pass

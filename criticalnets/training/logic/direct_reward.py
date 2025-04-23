@@ -46,7 +46,7 @@ class DiracRewardLogic(TrainingLogic):
             "game": "single",
             "steps": episode_idx,
             "reward": total_reward,
-            "loss": loss.detach(),
+            "loss": loss.detach().item(),
             "metrics": agent.get_metrics(),
         }
 

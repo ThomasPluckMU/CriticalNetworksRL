@@ -70,7 +70,7 @@ class SARSALogic(TrainingLogic):
             "game": "single",
             "steps": steps,
             "reward": total_reward,
-            "loss": loss,
+            "loss": loss.detach().item(),
             "metrics": agent.get_metrics(),
         }
 

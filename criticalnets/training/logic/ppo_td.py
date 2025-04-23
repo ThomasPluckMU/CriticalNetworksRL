@@ -159,5 +159,5 @@ class PPOLogic(TrainingLogic):
             "metrics": metrics,
             "steps": len(states),
             "reward": total_reward,
-            "loss": loss,
+            "loss": loss.detach().item(),
         }
