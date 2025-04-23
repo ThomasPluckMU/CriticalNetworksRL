@@ -88,7 +88,7 @@ class SingleGameTrainer(BaseTrainer):
         log_dir = os.path.join(
             self.config.get("log_dir", "logs"),
             "debug",
-            f"id_{self.config.get("run_id")}",
+            f"id_{self.config.get('run_id')}",
         )
         os.makedirs(log_dir, exist_ok=True)
 

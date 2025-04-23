@@ -1,6 +1,6 @@
 trainer: "SingleGameTrainer"
 game: "ALE/Pong-v5"
-device: "cuda:0"
+device: "cuda:1"
 episodes: 5000
 render: false
 debug: true
@@ -8,19 +8,19 @@ save_dir: "logs"
 log_dir: "logs"
 
 agents:
-  StandardAtariDQN:
+  PPOAgent:
     agent_params:
-      epsilon: [0.0, 0.05, 0.1]
+      epsilon: [0.05, 0.1]
     logics:
-      TDLogic:
+      PPOLogic:
         logic_params:
           gamma: [0.9, 0.99, 0.999]
 
-  CriticalAgent:
+  CriticalPPO:
     agent_params:
-      epsilon: [0.0, 0.05, 0.1]
+      epsilon: [0.05, 0.1]
       reg_strength: [0.0001, 0.001, 0.01]
     logics:
-      TDLogic:
+      PPOLogic:
         logic_params:
           gamma: [0.9, 0.99, 0.999]

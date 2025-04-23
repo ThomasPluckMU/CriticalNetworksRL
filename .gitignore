@@ -17,3 +17,5 @@
 *.log
 *.out
 *.synctex.gz
+
+monitor_jobs.sh
