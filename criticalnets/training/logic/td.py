@@ -25,7 +25,7 @@ class TDLogic(TrainingLogic):
         """
         self.learning_rate = config.get("lr", 0.01)
         self.gamma = config.get("gamma", 0.99)
-        self.batch_size = config.get("batch_size", 1)
+        self.batch_size = config.get("batch_size", 32)
         self.reg_strength = config.get("reg_strength", 0.01)
         self.loss_fn = None
         self.optimizer = None

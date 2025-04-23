@@ -27,7 +27,7 @@ class SARSALogic(TrainingLogic):
         """
         self.learning_rate = config.get("lr", 1e-1)
         self.gamma = config.get("gamma", 0.99)
-        self.batch_size = config.get("batch_size", 1)
+        self.batch_size = config.get("batch_size", 32)
         self.loss_fn = None
         self.optimizer = None
 
