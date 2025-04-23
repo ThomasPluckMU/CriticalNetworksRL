@@ -1,0 +1,15 @@
+trainer: "SingleGameTrainer"
+game: "ALE/Pong-v5"
+device: "cuda:1"
+episodes: 5000
+render: false
+debug: true
+save_dir: "logs"
+log_dir: "logs"
+
+agents:
+  A2CAgent:
+    logics:
+      A2CLogic:
+        logic_params:
+          gamma: [0.9, 0.99, 0.999]
