@@ -35,10 +35,8 @@ class DiracRewardLogic(TrainingLogic):
             target = (
                 2 * reward + 1
             ) * normalized_q.detach()  # Detach target to avoid double backprop
-            reg_loss = agent.get_metrics().get("criticality_loss")
-            loss = self.loss_fn(normalized_q, target) * self.rescale
-            if reg_loss is not None:
-                loss += reg_loss
+            reg_loss = agent.get_metrics().get("criticality_loss",0.0)
+            loss = self.loss_fn(normalized_q, target) * self.rescale + reg_loss
             # print(loss)
             self.step_optimizer(loss)
 
