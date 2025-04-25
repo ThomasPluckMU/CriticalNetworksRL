@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Dict, Type, Optional
 from pathlib import Path
 import os
-import gymnasium as gym
 from importlib import import_module
 
 from ..agents import BaseAtariAgent
@@ -41,10 +40,15 @@ class BaseTrainer:
         raise NotImplementedError("train function not implemented")
 
     def _make_env(self, game_name: str):
-        """Create and initialize environment"""
-        env = gym.make(
+        """Create and initialize environment using EnvPool"""        
+        if self.config.get("render", True) and type(self.atari_manager) == EnvPoolAtariManager:
+            print("Warning: EnvPool rendering differs from Gymnasium, implement custom rendering")
+        elif type(self.atari_manager) != EnvPoolAtariManager: 
+            env = self.atari_manager.make(
             game_name, render_mode="human" if self.config.get("render", True) else None
-        )
+            )
+
+        env = self.atari_manager.create_env(game_name)
         return env
 
     def save_checkpoint(self, game_name: str, episode: int):

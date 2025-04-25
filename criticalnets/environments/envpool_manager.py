@@ -8,32 +8,7 @@ class EnvPoolAtariManager:
     """Handles Atari environment setup and verification using EnvPool"""
 
     RELIABLE_GAMES = [
-        "Pong",
-        "Breakout",
-        "SpaceInvaders",
-        "MsPacman",
-        "Asterix",
-        "Boxing",
-        "Freeway",
-        "Seaquest",
-        "Assault",
-        "BeamRider",
-        "Centipede",
-        "DemonAttack",
-        "Enduro",
-        "Phoenix",
-        "Qbert",
-        "Riverraid",
-        "RoadRunner",
-        "Solaris",
-        "TimePilot",
-        "Tutankham",
-        "UpNDown",
-        "Venture",
-        "VideoPinball",
-        "WizardOfWor",
-        "YarsRevenge",
-        "Zaxxon",
+        "Pong-v5"
     ]
 
     def __init__(self, num_envs: int = 1):
@@ -102,14 +77,13 @@ class EnvPoolAtariManager:
 
         # Create new environment with EnvPool
         self.env = envpool.make(
-            "Atari",
-            env_id=self.current_game,
+            self.current_game,
+            env_type="gymnasium",
             num_envs=self.num_envs,
+            full_action_space = True,
             episodic_life=True,
             reward_clip=True,
-            sticky_action=True,
-            stack_num=4,  # Frame stacking for better learning
-            seed=42,
+            stack_num=4,
         )
 
         return self.env
@@ -120,7 +94,7 @@ class EnvPoolAtariManager:
         # For most games, it's 18, but we'll verify by sampling
 
         max_actions = 0
-        for game in self.working_games[:5]:  # Sample a few games to check
+        for game in self.working_games:  # Sample a few games to check
             try:
                 env = envpool.make("Atari", env_id=game, num_envs=1)
                 max_actions = max(max_actions, env.action_space.n)

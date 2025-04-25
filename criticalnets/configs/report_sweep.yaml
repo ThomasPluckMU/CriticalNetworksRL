@@ -1,0 +1,65 @@
+trainer: "SingleGameTrainer"
+game: "Pong-v5"
+device: "cuda"
+episodes: 5000
+render: false
+debug: true
+save_dir: "logs"
+log_dir: "logs"
+parallel: true
+max_jobs: 16
+
+agents:
+  StandardAtariDQN:
+    agent_params:
+      epsilon: [0.0, 0.05, 0.1]
+    logics:
+      TDLogic:
+        logic_params:
+          gamma: [0.9, 0.99, 0.999]
+      SARSALogic:
+        logic_params:
+          gamma: [0.9, 0.99, 0.999]
+
+  CriticalAgent:
+    agent_params:
+      epsilon: [0.0, 0.02]
+      reg_strength: [0.0001, 0.001, 0.01]
+    logics:
+      TDLogic:
+        logic_params:
+          gamma: [0.9, 0.99, 0.999]
+      SARSALogic:
+        logic_params:
+          gamma: [0.9, 0.99, 0.999]
+
+  PPOAgent:
+    agent_params:
+      epsilon: [0.0, 0.05, 0.1]
+    logics:
+      PPOLogic:
+        logic_params:
+          gamma: [0.9, 0.99, 0.999]
+
+  CriticalPPO:
+    agent_params:
+      epsilon: [0.0, 0.05, 0.1]
+      reg_strength: [0.0001, 0.001, 0.01]
+    logics:
+      PPOLogic:
+        logic_params:
+          gamma: [0.9, 0.99, 0.999]
+
+  PongA2CAgent:
+    logics:
+      A2CLogic:
+        logic_params:
+          gamma: [0.9, 0.99, 0.999]
+          
+  CriticalA2C:
+    agent_params:
+      reg_strength: [0.0001, 0.001, 0.01]
+    logics:
+      A2CLogic:
+        logic_params:
+          gamma: [0.9, 0.99, 0.999]

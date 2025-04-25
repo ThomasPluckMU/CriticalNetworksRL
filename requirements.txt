@@ -2,6 +2,7 @@
 torch>=2.0.0
 gymnasium[atari]>=0.28.1
 ale-py>=0.8.1
+envpool>=0.8.2
 numpy>=1.21.0
 matplotlib>=3.5.0
 keyboard>=0.13.5  # Cross-platform keyboard controls
@@ -13,5 +14,4 @@ msvc-runtime>=14.0 ; sys_platform == 'win32'
 coverage>=6.5.0
 pytest-cov>=4.0.0
 pytest>=7.0.0
-
 tqdm
