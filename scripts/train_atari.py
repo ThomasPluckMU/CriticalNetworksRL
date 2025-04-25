@@ -31,7 +31,7 @@ from criticalnets.configs import ConfigHandler
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from criticalnets.environments.gynasium_manager import AtariManager
+from criticalnets.environments.envpool_manager import EnvPoolAtariManager
 from criticalnets.agents import get_agent_class
 from criticalnets.training.logic import get_logic_class
 from criticalnets.training import get_trainer_class
@@ -127,7 +127,7 @@ def run_training(config: dict, run_id: int = 0):
             env.close()
 
             trainer = trainer_cls(
-                config, logic_cls, agent_cls, atari_manager=AtariManager()
+                config, logic_cls, agent_cls, atari_manager=EnvPoolAtariManager()
             )
             trainer.train(game, config.get("episodes", 1000))
 
