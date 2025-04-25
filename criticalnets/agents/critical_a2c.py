@@ -58,7 +58,7 @@ class CriticalA2C(BaseAtariAgent):
             Tuple of (policy logits, value estimate)
         """
         x = x.to(self.device)
-        
+
         # Normalize and reshape
         if x.dim() == 4 and x.shape[-1] in (1, 3):
             x = x.permute(0, 3, 1, 2).float() / 255.0
@@ -70,7 +70,7 @@ class CriticalA2C(BaseAtariAgent):
         # Frame stacking
         if x.size(1) == 3 and self.frame_stack > 1:
             x = x.repeat(1, self.frame_stack // 3 + 1, 1, 1)[:, : self.frame_stack]
-        
+
         # Resize
         if x.size(-2) != 84 or x.size(-1) != 84:
             x = F.interpolate(x, size=(84, 84), mode="bilinear", align_corners=False)

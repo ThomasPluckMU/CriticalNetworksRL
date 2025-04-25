@@ -135,7 +135,7 @@ class SARSALogic(TrainingLogic):
 
         # Compute loss
         loss = self.loss_fn(q_values, sarsa_targets)
-        reg_loss = agent.get_metrics().get("criticality_loss",0.0)
+        reg_loss = agent.get_metrics().get("criticality_loss", 0.0)
         loss += reg_loss
 
         # Optimize the model

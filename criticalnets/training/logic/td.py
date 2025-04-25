@@ -113,7 +113,7 @@ class TDLogic(TrainingLogic):
             td_targets = reward_batch + (self.gamma * next_max)
         # Compute loss
         loss = self.loss_fn(q_values, td_targets) * 1e3
-        reg_loss = agent.get_metrics().get("criticality_loss",0.0)
+        reg_loss = agent.get_metrics().get("criticality_loss", 0.0)
         loss += reg_loss
         # Optimize the model
         self.optimizer.zero_grad()

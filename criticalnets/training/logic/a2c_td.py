@@ -78,8 +78,13 @@ class A2CLogic(TrainingLogic):
         policy_loss = -(logp * adv_tensor.detach()).mean()
         value_loss = (ret_tensor - values).pow(2).mean()
         ent_loss = entropy.mean()
-        reg_loss = agent.get_metrics().get("criticality_loss",0.0)
-        loss = policy_loss + self.value_coef * value_loss - self.entropy_coef * ent_loss + reg_loss
+        reg_loss = agent.get_metrics().get("criticality_loss", 0.0)
+        loss = (
+            policy_loss
+            + self.value_coef * value_loss
+            - self.entropy_coef * ent_loss
+            + reg_loss
+        )
 
         self.optimizer.zero_grad()
         loss.backward()

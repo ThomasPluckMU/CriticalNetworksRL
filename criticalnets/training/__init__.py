@@ -9,7 +9,7 @@ from importlib import import_module
 from ..agents import BaseAtariAgent
 from ..training.logic import TrainingLogic
 
-from ..environments.atari_manager import AtariManager
+from ..environments.envpool_manager import EnvPoolAtariManager
 from ..utils.atari_helpers import ReplayMemory, KeyboardController
 
 
@@ -25,7 +25,7 @@ class BaseTrainer:
     ):
 
         self.config = config
-        self.atari_manager = atari_manager if atari_manager else AtariManager()
+        self.atari_manager = atari_manager if atari_manager else EnvPoolAtariManager()
         self.max_actions = self.atari_manager.get_max_action_space()
         self.keyboard = KeyboardController()
 

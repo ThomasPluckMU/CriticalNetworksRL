@@ -57,7 +57,7 @@ class GatedDynamicBiasCNN(DynamicBiasCNN):
         batch_size, in_channels, output_height, output_width = (
             super()._initialize_parameters(*args, **kwargs)
         )
-        
+
         return batch_size, in_channels, output_height, output_width
 
     def forward(self, x):

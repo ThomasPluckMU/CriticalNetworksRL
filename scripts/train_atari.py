@@ -31,7 +31,7 @@ from criticalnets.configs import ConfigHandler
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from criticalnets.environments.atari_manager import AtariManager
+from criticalnets.environments.gynasium_manager import AtariManager
 from criticalnets.agents import get_agent_class
 from criticalnets.training.logic import get_logic_class
 from criticalnets.training import get_trainer_class

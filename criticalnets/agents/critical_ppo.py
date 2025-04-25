@@ -71,7 +71,7 @@ class CriticalPPO(BaseAtariAgent):
             x = torch.nn.functional.interpolate(
                 x, size=(84, 84), mode="bilinear", align_corners=False
             )
-            
+
         return x
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -158,7 +158,7 @@ class CriticalPPO(BaseAtariAgent):
         if random.random() < self.epsilon:
             # Return random valid action
             return random.randint(0, 5)
-            
+
         with torch.no_grad():
             logits, _ = self.forward(state.unsqueeze(0))
             dist = torch.distributions.Categorical(logits=logits)

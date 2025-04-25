@@ -5,7 +5,7 @@ from typing import List
 import sys
 
 
-class AtariManager:
+class GymAtariManager:
     """Handles Atari environment setup and verification"""
 
     RELIABLE_GAMES = [

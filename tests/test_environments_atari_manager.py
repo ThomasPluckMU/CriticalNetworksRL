@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
 import numpy as np
-from criticalnets.environments.atari_manager import AtariManager
+from criticalnets.environments.gynasium_manager import AtariManager
 
 
 class TestAtariManager:

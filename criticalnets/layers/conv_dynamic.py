@@ -50,7 +50,7 @@ class DynamicBiasCNN(nn.Module):
         output_width = (
             (width + 2 * self.padding[1] - self.kernel_size[1]) // self.stride[1]
         ) + 1
-        
+
         self.register_buffer(
             "dynamic_bias",
             0.5
@@ -76,7 +76,7 @@ class DynamicBiasCNN(nn.Module):
         return batch_size, in_channels, output_height, output_width
 
     def forward(self, x):
-        
+
         # Apply the bias adjustment as in the NN implementation
         current_bias = self.velocity * self.dynamic_bias
         z = self.conv(x) + current_bias

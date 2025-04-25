@@ -130,7 +130,7 @@ class PPOLogic(TrainingLogic):
                     value_loss = F.mse_loss(vals, b_returns)
 
                     entropy = dist.entropy().mean()
-                    reg_loss = agent.get_metrics().get('criticality_loss',0.0)
+                    reg_loss = agent.get_metrics().get("criticality_loss", 0.0)
                     loss = (
                         policy_loss
                         + self.value_coef * value_loss
