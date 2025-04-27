@@ -40,6 +40,7 @@ class StandardAtariDQN(BaseAtariAgent):
             Q-values for each action
         """
         x = x.to(self.device).float() / 255.0  # Simple normalization only
+        x = x.squeeze(1)  # Remove extra dimension from envpool [batch,1,channels,height,width]
 
         # Apply convolutional layers with ReLU activations
         x = F.relu(self.conv1(x))

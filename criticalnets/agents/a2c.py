@@ -30,6 +30,7 @@ class PongA2CAgent(BaseAtariAgent):
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x.to(self.device).float() / 255.0  # Simple normalization only
+        x = x.squeeze(1)  # Remove extra dimension from envpool [batch,1,channels,height,width]
 
         # Conv backbone
         x = F.relu(self.conv1(x))

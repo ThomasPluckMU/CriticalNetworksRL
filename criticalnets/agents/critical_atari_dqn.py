@@ -55,6 +55,7 @@ class CriticalAgent(BaseAtariAgent):
             Q-values for each action
         """
         x = x.to(self.device).float() / 255.0  # Simple normalization only
+        x = x.squeeze(1)  # Remove extra dimension from envpool [batch,1,channels,height,width]
         
         # Save input for regularization
         self.saved_inputs["input"] = x

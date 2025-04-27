@@ -61,9 +61,14 @@ class SingleGameTrainer(BaseTrainer):
                     self._log_metrics(metrics, episode)
 
                 # Update progress bar with reward and loss
+                # Convert numpy arrays to scalars for display
+                reward_scalar = float(total_reward) if hasattr(total_reward, '__iter__') else total_reward
+                avg_reward = np.mean(self.all_rewards[-100:])
+                avg_scalar = float(avg_reward) if hasattr(avg_reward, '__iter__') else avg_reward
+                
                 postfix = {
-                    "reward": f"{total_reward:.2f}",
-                    "avg_reward": f"{np.mean(self.all_rewards[-100:]):.2f}",
+                    "reward": f"{reward_scalar:.2f}",
+                    "avg_reward": f"{avg_scalar:.2f}",
                 }
                 if metrics and "loss" in metrics:
                     postfix["loss"] = f"{metrics['loss']:.4f}"
@@ -84,6 +89,21 @@ class SingleGameTrainer(BaseTrainer):
         import json
         import os
         from datetime import datetime
+        import numpy as np
+
+        def convert_numpy(obj):
+            """Recursively convert numpy types to native Python types"""
+            if isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, dict):
+                return {k: convert_numpy(v) for k, v in obj.items()}
+            elif isinstance(obj, (list, tuple)):
+                return [convert_numpy(x) for x in obj]
+            return obj
 
         log_dir = os.path.join(
             self.config.get("log_dir", "logs"),
@@ -99,7 +119,11 @@ class SingleGameTrainer(BaseTrainer):
 
         with open(os.path.join(log_dir, filename), "w") as f:
             json.dump(
-                {"episode": episode, "timestamp": timestamp, "metrics": metrics},
+                convert_numpy({
+                    "episode": episode,
+                    "timestamp": timestamp,
+                    "metrics": metrics
+                }),
                 f,
                 indent=2,
             )

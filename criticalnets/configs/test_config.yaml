@@ -1,5 +1,5 @@
 trainer: "SingleGameTrainer"
-game: "ALE/Pong-v5"
+game: "Pong-v5"
 episodes: 2
 render: false
 debug: true

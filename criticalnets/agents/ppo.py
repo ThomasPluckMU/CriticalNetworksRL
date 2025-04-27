@@ -37,7 +37,8 @@ class PPOAgent(BaseAtariAgent):
         self.value_head = None
 
     def _extract_features(self, x: torch.Tensor) -> torch.Tensor:
-        return x.float() / 255.0  # Simple normalization only
+        x = x.float() / 255.0  # Simple normalization only
+        return x.squeeze(1)  # Remove extra dimension from envpool [batch,1,channels,height,width]
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x.to(self.device)

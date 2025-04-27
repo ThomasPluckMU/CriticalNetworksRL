@@ -102,9 +102,9 @@ class GatedAtariUDQN(BaseAtariAgent):
     def act(self, state):
         """Select action using epsilon-greedy policy"""
         if random.random() < self.epsilon:
-            # Return random valid action (0-3 for Breakout)
-            return random.randint(0, 3)
+            # Return random valid action as tensor (0-3 for Breakout)
+            return torch.tensor(random.randint(0, 3), device=self.device)
         with torch.no_grad():
             q_values = self.forward(state.unsqueeze(0))
             # Get top action and clamp to Breakout's action space (0-3)
-            return min(q_values.argmax().item(), 3)
+            return torch.clamp(q_values.argmax(), 0, 3)

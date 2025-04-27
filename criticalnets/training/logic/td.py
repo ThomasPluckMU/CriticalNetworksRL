@@ -45,8 +45,8 @@ class TDLogic(TrainingLogic):
             # Select action using epsilon-greedy policy
             action = agent.act(state_tensor)
 
-            # Execute action in environment
-            next_state, reward, terminated, truncated, _ = env.step(action)
+            # Execute action in environment (convert to int32 for envpool)
+            next_state, reward, terminated, truncated, _ = env.step(action.cpu().numpy().astype('int32'))
             done = terminated or truncated
 
             # Store transition in replay memory
@@ -100,7 +100,8 @@ class TDLogic(TrainingLogic):
         # Compute current Q values: Q(s,a)
         current_q_values = agent.forward(state_batch)
         # Get the Q-values for the actions that were taken
-        q_values = current_q_values.gather(1, action_batch.unsqueeze(1)).squeeze(1)
+        action_batch = action_batch.view(-1, 1)  # Ensure proper shape for gather
+        q_values = current_q_values.gather(1, action_batch).squeeze(1)
 
         # Compute next Q values (for TD target): max_a' Q(s',a')
         with torch.no_grad():

@@ -87,6 +87,7 @@ class PPOLogic(TrainingLogic):
             actions_t = torch.stack(actions).to(agent.device)
             old_logp_t = torch.stack(log_probs)
             returns_t = torch.stack(returns).to(agent.device)
+            advs_t = torch.stack(advs).to(agent.device)
             advs_t = (advs_t - advs_t.mean()) / (advs_t.std() + 1e-8)
 
             # PPO update epochs
@@ -130,7 +131,7 @@ class PPOLogic(TrainingLogic):
                         + self.value_coef * value_loss
                         - self.entropy_coef * entropy
                         + reg_loss
-                    
+                    )
 
                     self.optimizer.zero_grad()
                     loss.backward()
