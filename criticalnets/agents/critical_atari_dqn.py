@@ -49,29 +49,13 @@ class CriticalAgent(BaseAtariAgent):
         Forward pass through the network
 
         Args:
-            x: Input tensor of shape (batch_size, height, width, channels)
+            x: Input tensor of shape (batch_size, channels, height, width)
 
         Returns:
             Q-values for each action
         """
-        x = x.to(self.device)
-        # Convert from (B,H,W,C) to (B,C,H,W) and normalize
-        if x.dim() == 4:  # Batch input
-            x = x.permute(0, 3, 1, 2).float() / 255.0
-        else:  # Single input
-            x = x.permute(2, 0, 1).float().unsqueeze(0) / 255.0
-
-        # Handle frame stacking if needed
-        if x.size(1) == 3 and self.frame_stack > 1:
-            # Repeat current frame to match frame_stack
-            x = x.repeat(1, self.frame_stack // 3 + 1, 1, 1)[:, : self.frame_stack]
-
-        # Resize input to expected 84x84 dimensions
-        if x.size(-2) != 84 or x.size(-1) != 84:
-            x = torch.nn.functional.interpolate(
-                x, size=(84, 84), mode="bilinear", align_corners=False
-            )
-
+        x = x.to(self.device).float() / 255.0  # Simple normalization only
+        
         # Save input for regularization
         self.saved_inputs["input"] = x
 
@@ -127,15 +111,15 @@ class CriticalAgent(BaseAtariAgent):
 
         return output
 
-    def act(self, state):
-        """Select action using epsilon-greedy policy"""
-        if random.random() < self.epsilon:
-            # Return random valid action (0-3 for Breakout)
-            return random.randint(0, 5)
+    def act(self, states):
+        """Select actions using epsilon-greedy policy"""
         with torch.no_grad():
-            q_values = self.forward(state.unsqueeze(0))
-            # Get top action and clamp to Breakout's action space (0-3)
-            return min(q_values.argmax().item(), 5)
+            q_values = self.forward(states)
+            actions = q_values.argmax(dim=1)
+            if self.epsilon > 0:
+                mask = torch.rand(actions.size(0)) < self.epsilon
+                actions[mask] = torch.randint(0, 6, (mask.sum(),))
+            return actions
 
     def get_metrics(self):
         """

@@ -51,28 +51,12 @@ class CriticalPPO(BaseAtariAgent):
         Extract features from raw input tensor
 
         Args:
-            x: Input tensor of shape (batch_size, height, width, channels)
+            x: Input tensor of shape (batch_size, channels, height, width)
 
         Returns:
             Processed tensor ready for conv layers
         """
-        if x.dim() == 4:  # Batch input
-            x = x.permute(0, 3, 1, 2).float() / 255.0
-        else:  # Single input
-            x = x.permute(2, 0, 1).float().unsqueeze(0) / 255.0
-
-        # Handle frame stacking if needed
-        if x.size(1) == 3 and self.frame_stack > 1:
-            # Repeat current frame to match frame_stack
-            x = x.repeat(1, self.frame_stack // 3 + 1, 1, 1)[:, : self.frame_stack]
-
-        # Resize input to expected 84x84 dimensions
-        if x.size(-2) != 84 or x.size(-1) != 84:
-            x = torch.nn.functional.interpolate(
-                x, size=(84, 84), mode="bilinear", align_corners=False
-            )
-
-        return x
+        return x.float() / 255.0  # Simple normalization only
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -145,24 +129,24 @@ class CriticalPPO(BaseAtariAgent):
 
         return logits, value
 
-    def act(self, state: torch.Tensor) -> int:
+    def act(self, states: torch.Tensor) -> torch.Tensor:
         """
-        Select action based on current policy
+        Select actions based on current policy
 
         Args:
-            state: Current state observation
+            states: Batch of state observations
 
         Returns:
-            Selected action
+            Tensor of selected actions
         """
-        if random.random() < self.epsilon:
-            # Return random valid action
-            return random.randint(0, 5)
-
         with torch.no_grad():
-            logits, _ = self.forward(state.unsqueeze(0))
+            logits, _ = self.forward(states)
             dist = torch.distributions.Categorical(logits=logits)
-            return int(dist.sample().item())
+            actions = dist.sample()
+            if self.epsilon > 0:
+                mask = torch.rand(actions.size(0)) < self.epsilon
+                actions[mask] = torch.randint(0, 6, (mask.sum(),))
+            return actions
 
     def get_metrics(self):
         """

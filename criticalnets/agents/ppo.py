@@ -37,15 +37,7 @@ class PPOAgent(BaseAtariAgent):
         self.value_head = None
 
     def _extract_features(self, x: torch.Tensor) -> torch.Tensor:
-        if x.dim() == 4:
-            x = x.permute(0, 3, 1, 2).float() / 255.0
-        else:
-            x = x.permute(2, 0, 1).unsqueeze(0).float() / 255.0
-        if x.size(1) == 3 and self.frame_stack > 1:
-            x = x.repeat(1, self.frame_stack // 3 + 1, 1, 1)[:, : self.frame_stack]
-        if x.size(-2) != 84 or x.size(-1) != 84:
-            x = F.interpolate(x, size=(84, 84), mode="bilinear", align_corners=False)
-        return x
+        return x.float() / 255.0  # Simple normalization only
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x.to(self.device)
@@ -67,9 +59,11 @@ class PPOAgent(BaseAtariAgent):
         value = self.value_head(a4).squeeze(-1)
         return logits, value
 
-    def act(self, state: torch.Tensor) -> int:
-        logits, _ = self.forward(state.unsqueeze(0))
+    def act(self, states: torch.Tensor) -> torch.Tensor:
+        logits, _ = self.forward(states)
         dist = torch.distributions.Categorical(logits=logits)
-        if random.random() < self.epsilon:
-            return random.randrange(6)
-        return int(dist.sample().item())
+        actions = dist.sample()
+        if self.epsilon > 0:
+            mask = torch.rand(actions.size(0)) < self.epsilon
+            actions[mask] = torch.randint(0, 6, (mask.sum(),))
+        return actions

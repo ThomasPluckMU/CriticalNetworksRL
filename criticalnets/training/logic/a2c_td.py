@@ -26,7 +26,7 @@ class A2CLogic(TrainingLogic):
 
     def run_episode(self, env, agent, memory, episode_idx: int) -> Tuple[float, Dict]:
         # Buffers for trajectory
-        obs_buf, act_buf, logp_buf, val_buf, rew_buf = [], [], [], [], []
+        obs_buf, act_buf, logp_buf, val_buf, rew_buf, done_buf = [], [], [], [], [], []
 
         obs, _ = env.reset()
         done = False
@@ -35,43 +35,43 @@ class A2CLogic(TrainingLogic):
         # Play until game terminates
         while not done:
             state_tensor = torch.from_numpy(obs).float().to(agent.device)
-            logits, value = agent.forward(state_tensor.unsqueeze(0))
+            logits, value = agent.forward(state_tensor)
             dist = Categorical(logits=logits)
-            action = dist.sample().item()
-            logp = dist.log_prob(torch.tensor(action).to(agent.device))
+            actions = dist.sample()
+            logps = dist.log_prob(actions)
 
-            next_obs, reward, terminated, truncated, _ = env.step(action)
+            next_obs, reward, terminated, truncated, _ = env.step(actions.cpu().numpy())
             done = terminated or truncated
 
             # Record step
             obs_buf.append(obs)
-            act_buf.append(action)
-            logp_buf.append(logp)
-            val_buf.append(value.item())
+            act_buf.append(actions)
+            logp_buf.append(logps)
+            val_buf.append(value)
             rew_buf.append(reward)
+            done_buf.append(done)
 
             obs = next_obs
-            total_reward += reward
+            total_reward += reward.mean().item()
 
         # No bootstrap beyond terminal
-        last_val = 0.0
+        last_val = torch.zeros_like(val_buf[-1])
 
         # Compute returns and advantages
         ret_buf, adv_buf = [], []
         R = last_val
         for r, v in zip(reversed(rew_buf), reversed(val_buf)):
-            R = r + self.gamma * R
+            R = torch.tensor(r).to(agent.device) + self.gamma * R * (~torch.tensor(done_buf[-1]).to(agent.device)).float()
             adv = R - v
             ret_buf.insert(0, R)
             adv_buf.insert(0, adv)
 
         # Convert to tensors
-        obs_array = np.stack(obs_buf)
-        obs_tensor = torch.from_numpy(obs_array).float().to(agent.device)
-        act_tensor = torch.LongTensor(act_buf).to(agent.device)
+        obs_tensor = torch.from_numpy(np.stack(obs_buf)).float().to(agent.device)
+        act_tensor = torch.stack(act_buf).to(agent.device)
         old_logp = torch.stack(logp_buf).detach()
-        ret_tensor = torch.FloatTensor(ret_buf).to(agent.device)
-        adv_tensor = torch.FloatTensor(adv_buf).to(agent.device)
+        ret_tensor = torch.stack(ret_buf).to(agent.device)
+        adv_tensor = torch.stack(adv_buf).to(agent.device)
 
         # Single update
         values, logp, entropy = agent.evaluate_actions(obs_tensor, act_tensor)

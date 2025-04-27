@@ -52,29 +52,13 @@ class CriticalA2C(BaseAtariAgent):
         Forward pass through the network
 
         Args:
-            x: Input tensor of shape (batch_size, height, width, channels)
+            x: Input tensor of shape (batch_size, channels, height, width)
 
         Returns:
             Tuple of (policy logits, value estimate)
         """
-        x = x.to(self.device)
-
-        # Normalize and reshape
-        if x.dim() == 4 and x.shape[-1] in (1, 3):
-            x = x.permute(0, 3, 1, 2).float() / 255.0
-        else:
-            x = x.float() / 255.0
-            if x.dim() == 3:
-                x = x.unsqueeze(0)
-
-        # Frame stacking
-        if x.size(1) == 3 and self.frame_stack > 1:
-            x = x.repeat(1, self.frame_stack // 3 + 1, 1, 1)[:, : self.frame_stack]
-
-        # Resize
-        if x.size(-2) != 84 or x.size(-1) != 84:
-            x = F.interpolate(x, size=(84, 84), mode="bilinear", align_corners=False)
-
+        x = x.to(self.device).float() / 255.0  # Simple normalization only
+        
         # Save input for regularization
         self.saved_inputs["input"] = x
 
@@ -131,20 +115,20 @@ class CriticalA2C(BaseAtariAgent):
 
         return logits, value
 
-    def act(self, state: torch.Tensor) -> int:
+    def act(self, states: torch.Tensor) -> torch.Tensor:
         """
-        Select action based on current policy
+        Select actions based on current policy
 
         Args:
-            state: Current state observation
+            states: Batch of state observations
 
         Returns:
-            Selected action
+            Tensor of selected actions
         """
         with torch.no_grad():
-            logits, _ = self.forward(state.unsqueeze(0))
+            logits, _ = self.forward(states)
             dist = torch.distributions.Categorical(logits=logits)
-            return dist.sample().item()
+            return dist.sample()
 
     def evaluate_actions(
         self, states: torch.Tensor, actions: torch.Tensor

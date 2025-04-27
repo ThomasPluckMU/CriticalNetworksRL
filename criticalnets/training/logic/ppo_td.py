@@ -42,16 +42,12 @@ class PPOLogic(TrainingLogic):
             # Run rollout_length steps (or less if episode ends earlier)
             for _ in range(self.rollout_length):
                 st = torch.from_numpy(state).float().to(agent.device)
-                logits, val = agent.forward(st.unsqueeze(0))
+                logits, val = agent.forward(st)
                 dist = torch.distributions.Categorical(logits=logits)
-                action = dist.sample().item()
+                action = dist.sample()
+                logp = dist.log_prob(action).detach()
 
-                # Prevent invalid action if needed (specific Atari constraint)
-                action = min(action, env.action_space.n - 1)
-
-                logp = dist.log_prob(torch.tensor(action).to(agent.device)).detach()
-
-                next_state, reward, terminated, truncated, _ = env.step(action)
+                next_state, reward, terminated, truncated, _ = env.step(action.cpu().numpy())
                 done = terminated or truncated
 
                 states.append(st)
@@ -59,41 +55,39 @@ class PPOLogic(TrainingLogic):
                 rewards.append(reward)
                 dones.append(done)
                 log_probs.append(logp)
-                values.append(val.squeeze(0).detach())
+                values.append(val.detach())
 
                 state = next_state
-                total_reward += reward
+                total_reward += reward.mean().item()
 
                 if done:
                     break  # Exit inner loop immediately on actual termination
 
             # Compute GAE and returns for collected rollout
             last_val = (
-                0
+                torch.zeros_like(values[-1])
                 if done
                 else agent.forward(
-                    torch.from_numpy(state).float().unsqueeze(0).to(agent.device)
-                )[1].item()
+                    torch.from_numpy(state).float().to(agent.device)
+                )[1].detach()
             )
 
             returns, advs = [], []
-            gae = 0
+            gae = torch.zeros_like(last_val)
             for r, v, d in zip(reversed(rewards), reversed(values), reversed(dones)):
-                mask = 1.0 - float(d)
-                delta = r + self.gamma * last_val * mask - v.item()
+                mask = (~torch.tensor(d).to(agent.device)).float()
+                delta = torch.tensor(r).to(agent.device) + self.gamma * last_val * mask - v
                 gae = delta + self.gamma * 0.95 * mask * gae
                 advs.insert(0, gae)
-                last_val = v.item()
+                last_val = v
 
-            returns = [a + v.item() for a, v in zip(advs, values)]
+            returns = [a + v for a, v in zip(advs, values)]
 
             states_t = torch.stack(states)
-            actions_t = torch.tensor(actions, dtype=torch.int64).to(agent.device)
+            actions_t = torch.stack(actions).to(agent.device)
             old_logp_t = torch.stack(log_probs)
-            returns_t = torch.tensor(returns).float().to(agent.device)
-            advs_t = (
-                torch.tensor(advs).float().to(agent.device) - returns_t.mean()
-            ) / (returns_t.std() + 1e-8)
+            returns_t = torch.stack(returns).to(agent.device)
+            advs_t = (advs_t - advs_t.mean()) / (advs_t.std() + 1e-8)
 
             # PPO update epochs
             for _ in range(self.epochs):
@@ -136,7 +130,7 @@ class PPOLogic(TrainingLogic):
                         + self.value_coef * value_loss
                         - self.entropy_coef * entropy
                         + reg_loss
-                    )
+                    
 
                     self.optimizer.zero_grad()
                     loss.backward()
