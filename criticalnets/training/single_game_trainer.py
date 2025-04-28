@@ -120,6 +120,7 @@ class SingleGameTrainer(BaseTrainer):
         with open(os.path.join(log_dir, filename), "w") as f:
             json.dump(
                 convert_numpy({
+                    "config": self.config,
                     "episode": episode,
                     "timestamp": timestamp,
                     "metrics": metrics
