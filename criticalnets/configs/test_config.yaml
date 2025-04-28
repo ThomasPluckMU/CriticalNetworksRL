@@ -5,6 +5,9 @@ render: false
 debug: true
 save_dir: "logs"
 log_dir: "logs"
+device: "cuda"  # Default device for training
+parallel: true
+max_jobs: 4  # Matches available GPUs
 
 agents:
   PongA2CAgent:
@@ -25,28 +28,34 @@ agents:
     logics:
       TDLogic:
         logic_params:
-          batch_size: [1,16,32]
+          batch_size: [1]
+      SARSALogic:
+        logic_params:
+          batch_size: [1]
 
   CriticalAgent:
     logics:
       TDLogic:
         logic_params:
-          batch_size: [1,16,32]
+          batch_size: [1]
+      SARSALogic:
+        logic_params:
+          batch_size: [1]
           
-  GatedAtariUDQN:
-    logics:
-      TDLogic:
-        logic_params:
-          batch_size: [1,16,32]
+  # GatedAtariUDQN:
+  #   logics:
+  #     TDLogic:
+  #       logic_params:
+  #         batch_size: [1]
 
-  DynamicAtariUDQN:
-    logics:
-      TDLogic:
-        logic_params:
-          batch_size: [1,16,32]
+  # DynamicAtariUDQN:
+  #   logics:
+  #     TDLogic:
+  #       logic_params:
+  #         batch_size: [1]
 
-  GatedCriticalAtariUDQN:
-    logics:
-      TDLogic:
-        logic_params:
-          batch_size: [1,16,32]
+  # GatedCriticalAtariUDQN:
+  #   logics:
+  #     TDLogic:
+  #       logic_params:
+  #         batch_size: [1]

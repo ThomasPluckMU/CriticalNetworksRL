@@ -30,15 +30,15 @@ class CriticalAgent(BaseAtariAgent):
         self.epsilon = config.get("epsilon", 0.1)
 
         # Define standard convolutional layers (without dynamic bias)
-        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4).to(self.device)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2).to(self.device)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1).to(self.device)
 
         self.activation_function = F.tanh
 
         # Fully connected layers - will be initialized after first forward pass
         self.fc = None
-        self.head = nn.Linear(512, action_space)
+        self.head = nn.Linear(512, action_space).to(self.device)
 
         # Track activation values for regularization
         self.saved_activations = {}
@@ -119,7 +119,7 @@ class CriticalAgent(BaseAtariAgent):
             actions = q_values.argmax(dim=1)
             if self.epsilon > 0:
                 mask = torch.rand(actions.size(0)) < self.epsilon
-                actions[mask] = torch.randint(0, 6, (mask.sum(),))
+                actions[mask] = torch.randint(0, 6, (mask.sum(),), device=self.device)
             return actions
 
     def get_metrics(self):

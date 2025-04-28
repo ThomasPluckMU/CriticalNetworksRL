@@ -31,17 +31,17 @@ class CriticalA2C(BaseAtariAgent):
         self.reg_strength = config.get("reg_strength", 1e0)
 
         # Define standard convolutional layers (without dynamic bias)
-        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4).to(self.device)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2).to(self.device)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1).to(self.device)
 
         self.activation_function = F.tanh
 
         # Fully connected layers - will be initialized after first forward pass
         self.fc = None
         # Actor and critic heads
-        self.actor = nn.Linear(512, 6)  # 6 actions for Pong
-        self.critic = nn.Linear(512, 1)
+        self.actor = nn.Linear(512, 6).to(self.device)  # 6 actions for Pong
+        self.critic = nn.Linear(512, 1).to(self.device)
 
         # Track activation values for regularization
         self.saved_activations = {}
@@ -58,6 +58,8 @@ class CriticalA2C(BaseAtariAgent):
             Tuple of (policy logits, value estimate)
         """
         x = x.to(self.device).float() / 255.0  # Simple normalization only
+        x = x.squeeze(1)  # Remove extra dimension from envpool [batch,1,channels,height,width]
+
         
         # Save input for regularization
         self.saved_inputs["input"] = x
@@ -96,8 +98,11 @@ class CriticalA2C(BaseAtariAgent):
         x_flat = a3.view(a3.size(0), -1)
 
         if self.fc is None:
-            # Initialize fc layer with correct input size
+            # Initialize fc layer with correct input size on same device
             self.fc = nn.Linear(x_flat.size(1), 512).to(self.device)
+            # Ensure actor/critic are on same device
+            self.actor = self.actor.to(self.device)
+            self.critic = self.critic.to(self.device)
 
         # Fully connected layer
         z4 = self.fc(x_flat)

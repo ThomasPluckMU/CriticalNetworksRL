@@ -21,13 +21,13 @@ class StandardAtariDQN(BaseAtariAgent):
         self.epsilon = config.get("epsilon", 0.1)
 
         # Define standard convolutional layers
-        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4).to(self.device)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2).to(self.device)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1).to(self.device)
 
         # Feature size will be determined after first forward pass
         self.fc = None
-        self.head = nn.Linear(512, action_space)
+        self.head = nn.Linear(512, action_space).to(self.device)
 
     def forward(self, x):
         """
@@ -66,6 +66,7 @@ class StandardAtariDQN(BaseAtariAgent):
             q_values = self.forward(states)
             actions = q_values.argmax(dim=1)
             if self.epsilon > 0:
-                mask = torch.rand(actions.size(0)) < self.epsilon
-                actions[mask] = torch.randint(0, 6, (mask.sum(),))
+                device = states.device
+                mask = torch.rand(actions.size(0), device=device) < self.epsilon
+                actions[mask] = torch.randint(0, 6, (mask.sum(),), device=device)
             return actions

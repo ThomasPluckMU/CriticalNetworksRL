@@ -20,11 +20,11 @@ def get_activation_derivatives(activation_func, z):
     y = activation_func(z)
 
     # First derivative: σ'(z)
-    first_derivative = torch.autograd.grad(y.sum(), z, create_graph=True)[0]
+    first_derivative = torch.autograd.grad(y.mean(), z, create_graph=True)[0]
 
     # Second derivative: σ''(z)
     second_derivative = torch.autograd.grad(
-        first_derivative.sum(), z, create_graph=True
+        first_derivative.mean(), z, create_graph=True
     )[0]
 
     return first_derivative, second_derivative
@@ -66,7 +66,7 @@ def criticality_regularization(model, x, activation_func, layer_type="conv"):
     # Compute Jacobian norm with numerical stability
     jacobian_norm = torch.linalg.vector_norm(jacobian) + EPSILON
     # Compute Laplacian approximation
-    laplacian_sum = torch.sum(laplacian)
+    laplacian_sum = torch.mean(laplacian)
     # Compute the regularization term (without abs to preserve gradient direction)
     reg_term = (
         2
@@ -82,7 +82,7 @@ def compute_jacobian_approximation(model, x, activation_func):
     x = x.detach().clone().requires_grad_(True)
     z = model(x)
     a = activation_func(z)
-    return torch.autograd.grad(a.sum(), x, create_graph=False, retain_graph=False)[0]
+    return torch.autograd.grad(a.mean(), x, create_graph=False, retain_graph=False)[0]
 
 
 def compute_laplacian_approximation(model, x, activation_func):
@@ -104,7 +104,7 @@ def compute_laplacian_approximation(model, x, activation_func):
     # Forward pass
     z = model(x)
     a = activation_func(z)
-    output_sum = a.sum()  # Sum all outputs to get a scalar
+    output_sum = a.mean()  # Sum all outputs to get a scalar
 
     # First derivatives
     grad_a = torch.autograd.grad(
@@ -122,7 +122,7 @@ def compute_laplacian_approximation(model, x, activation_func):
     # This is more efficient - compute gradients with respect to sum of gradient
     # This effectively computes the trace of the Hessian matrix
     hessian_diag = torch.autograd.grad(
-        outputs=grad_a.sum(), inputs=x, create_graph=False, retain_graph=False
+        outputs=grad_a.mean(), inputs=x, create_graph=False, retain_graph=False
     )[0]
 
     return hessian_diag

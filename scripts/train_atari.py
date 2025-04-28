@@ -28,7 +28,7 @@ import sys
 from pathlib import Path
 import hashlib, json
 import torch
-from concurrent.futures import ProcessPoolExecutor
+import concurrent.futures
 import multiprocessing as mp
 from criticalnets.configs import ConfigHandler
 
@@ -95,9 +95,7 @@ def parse_args():
 
 def train_game(config, game, gpu_id, run_id):
     """Train a single game with specified config on a specific GPU"""
-    # Set CUDA device for this process
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-    
+
     import logging
     from datetime import datetime
 
@@ -218,64 +216,121 @@ def run_training(config: dict, run_id: int = 0):
         return False
 
 
-def run_parallel_training(config, games, run_id):
-    """Run training on multiple games in parallel across GPUs"""
+def run_parallel_training(config, configs_to_run):
+    """Run training on multiple configurations in parallel across available workers
+    
+    Args:
+        config: Base configuration with general settings
+        configs_to_run: List of configurations to distribute across workers
+        run_id_base: Base identifier for this training run
+    """
     import logging
+    import queue
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    
     logger = logging.getLogger(__name__)
     
     # Get available GPUs
     num_gpus = torch.cuda.device_count()
     if num_gpus == 0:
         logger.warning("No GPUs detected! Falling back to sequential training on CPU.")
-        for game in games:
-            if game:
-                train_game(config, game, 0, run_id)
+        for idx, train_config in enumerate(configs_to_run):
+            train_game(train_config, train_config.get("game"), 0, f"{train_config['run_id']}")
         return
     
-    logger.info(f"Running parallel training across {num_gpus} GPUs")
+    # Determine max concurrent jobs
+    max_jobs = min(config.get("max_jobs", num_gpus * 2), len(configs_to_run))
+    logger.info(f"Running parallel training across {num_gpus} GPUs with max {max_jobs} concurrent jobs")
     
-    # Determine max concurrent jobs (default: num_gpus * 2)
-    max_jobs = min(config.get("max_jobs", num_gpus * 2), len(games))
+    # Create a queue of training configurations
+    config_queue = queue.Queue()
+    for idx, train_config in enumerate(configs_to_run):
+        config_queue.put((idx, train_config))
+    
+    results = []
     
     # Use process pool for parallel execution
     with ProcessPoolExecutor(max_workers=max_jobs) as executor:
-        futures = []
+        # Dictionary to keep track of running tasks
+        running_tasks = {}
+        completed_count = 0
         
-        # Submit jobs, round-robin across GPUs
-        for i, game in enumerate(games):
-            if not game:
-                continue
+        # Start initial batch of tasks
+        for worker_id in range(min(max_jobs, config_queue.qsize())):
+            if not config_queue.empty():
+                idx, train_config = config_queue.get()
+                gpu_id = worker_id % num_gpus  # Distribute across available GPUs
                 
-            gpu_id = i % num_gpus
-            logger.info(f"Scheduling {game} on GPU {gpu_id}")
-            
-            # Submit training job
-            future = executor.submit(
-                train_game,
-                config.copy(),  # Copy config to avoid shared dict issues
-                game,
-                gpu_id,
-                f"{run_id}_{i}"
-            )
-            futures.append((future, game, gpu_id))
+                # Copy config and set device
+                job_config = train_config.copy()
+                job_config['device'] = f"cuda:{gpu_id}"
+                
+                game = job_config.get("game")
+                logger.info(f"Scheduling config {idx} ({game}) on GPU {gpu_id}")
+                
+                # Submit job
+                future = executor.submit(
+                    train_game,
+                    job_config,
+                    game,
+                    gpu_id,
+                    f"{job_config['run_id']}"
+                )
+                running_tasks[future] = (idx, game, gpu_id)
         
-        # Wait for all jobs to complete
-        for future, game, gpu_id in futures:
-            result = future.result()
-            status = "Success" if result else "Failed"
-            logger.info(f"{status}: {game} on GPU {gpu_id}")
-
-
-def config_to_hex(config):
-    # Filter out non-serializable objects
-    config_copy = {k: v for k, v in config.items() if isinstance(v, (str, int, float, bool, list, dict, type(None)))}
-    return hashlib.md5(json.dumps(config_copy, sort_keys=True).encode()).hexdigest()[:8]
+        # Process results as they complete and schedule new jobs
+        while running_tasks:
+            # Wait for a task to complete
+            done, _ = concurrent.futures.wait(
+                running_tasks.keys(),
+                return_when=concurrent.futures.FIRST_COMPLETED
+            )
+            
+            # Process completed tasks
+            for future in done:
+                idx, game, gpu_id = running_tasks.pop(future)
+                try:
+                    result = future.result()
+                    status = "Success" if result else "Failed"
+                    logger.info(f"{status}: Config {idx} ({game}) on GPU {gpu_id}")
+                    results.append((idx, game, status))
+                    completed_count += 1
+                except Exception as e:
+                    logger.error(f"Exception in worker: {str(e)}")
+                    results.append((idx, game, "Error"))
+                    completed_count += 1
+                
+                # Schedule a new task if there are configs left
+                if not config_queue.empty():
+                    next_idx, next_config = config_queue.get()
+                    next_game = next_config.get("game")
+                    
+                    # Copy config and set device
+                    job_config = next_config.copy()
+                    job_config['device'] = f"cuda:{gpu_id}"  # Reuse the GPU
+                    
+                    logger.info(f"Scheduling config {next_idx} ({next_game}) on GPU {gpu_id}")
+                    
+                    # Submit new job
+                    new_future = executor.submit(
+                        train_game,
+                        job_config,
+                        next_game,
+                        gpu_id,
+                        f"{job_config['run_id']}"
+                    )
+                    running_tasks[new_future] = (next_idx, next_game, gpu_id)
+    
+    logger.info(f"All training jobs completed. Total: {completed_count}")
+    return results
 
 
 def main():
     # On Linux, use 'spawn' method for better CUDA compatibility
     if sys.platform == 'linux':
-        mp.set_start_method('spawn')
+        mp.set_start_method('spawn', force=True)
+        
+    from datetime import datetime
         
     args = parse_args()
 
@@ -283,17 +338,26 @@ def main():
         # Use config file mode
         config_handler = ConfigHandler(args.config)
         configs = config_handler.generate_configs()
-        total_runs = len(configs)
-        successful_runs = 0
-
-        for idx, config in enumerate(configs):
-            # Add parallel flag if enabled
-            if args.parallel:
-                config["parallel"] = True
-                config["max_jobs"] = args.max_jobs
-                
-            run_training(config, run_id=config_to_hex(config))
-            print(f"\n=== Completed run {idx+1}/{total_runs} ===\n")
+        total_configs = len(configs)
+        
+        # Base configuration for shared settings
+        base_config = {
+            "save_dir": args.save_dir,
+            "log_dir": args.log_dir,
+            "debug": args.debug,
+            "max_jobs": args.max_jobs
+        }
+        
+        # If parallel mode is enabled, run all configs in parallel
+        if args.parallel:
+            print(f"Running {total_configs} configurations in parallel mode")
+            run_parallel_training(base_config, configs)
+        else:
+            # Run configs sequentially
+            for idx, config in enumerate(configs):
+                run_id = config['run_id']
+                run_training(config, run_id=run_id)
+                print(f"\n=== Completed run {idx+1}/{total_configs} ===\n")
 
     else:
         # Legacy CLI args mode
@@ -316,8 +380,7 @@ def main():
             "max_jobs": args.max_jobs,
         }
         os.makedirs(args.save_dir, exist_ok=True)
-        run_training(config, run_id=config_to_hex(config))
-
+        run_training(config, run_id=config['run_id'])
 
 if __name__ == "__main__":
     main()

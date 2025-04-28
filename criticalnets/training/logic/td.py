@@ -46,7 +46,7 @@ class TDLogic(TrainingLogic):
             action = agent.act(state_tensor)
 
             # Execute action in environment (convert to int32 for envpool)
-            next_state, reward, terminated, truncated, _ = env.step(action.cpu().numpy().astype('int32'))
+            next_state, reward, terminated, truncated, _ = env.step(action.detach().cpu().numpy().astype('int32'))
             done = terminated or truncated
 
             # Store transition in replay memory
@@ -85,7 +85,9 @@ class TDLogic(TrainingLogic):
 
         for t in transitions:
             states.append(t.state)
-            actions.append(t.action)
+            # Convert action to CPU numpy array if it's a tensor
+            action = t.action.cpu().numpy() if torch.is_tensor(t.action) else t.action
+            actions.append(action)
             rewards.append(t.reward)
             next_states.append(t.next_state)
             dones.append(t.done)

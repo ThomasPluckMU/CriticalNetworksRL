@@ -31,9 +31,9 @@ class CriticalPPO(BaseAtariAgent):
         self.epsilon = config.get("epsilon", 0.0)
 
         # Define standard convolutional layers (without dynamic bias)
-        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4).to(self.device)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2).to(self.device)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1).to(self.device)
 
         self.activation_function = F.tanh
 
@@ -70,6 +70,8 @@ class CriticalPPO(BaseAtariAgent):
         """
         x = x.to(self.device)
         x = self._extract_features(x)
+        x = x.squeeze(1)  # Remove extra dimension from envpool [batch,1,channels,height,width]
+
 
         # Save input for regularization
         self.saved_inputs["input"] = x

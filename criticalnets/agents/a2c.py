@@ -18,15 +18,15 @@ class PongA2CAgent(BaseAtariAgent):
         self.frame_stack = config.get("frame_stack", 4)
 
         # Convolutional layers
-        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
+        self.conv1 = nn.Conv2d(self.frame_stack, 32, kernel_size=8, stride=4).to(self.device)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2).to(self.device)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1).to(self.device)
 
         # FC representation
         self.fc = None
         # Actor and critic heads
-        self.actor = nn.Linear(512, 6)
-        self.critic = nn.Linear(512, 1)
+        self.actor = nn.Linear(512, 6).to(self.device)
+        self.critic = nn.Linear(512, 1).to(self.device)
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x.to(self.device).float() / 255.0  # Simple normalization only

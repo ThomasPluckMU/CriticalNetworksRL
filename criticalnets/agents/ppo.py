@@ -43,11 +43,11 @@ class PPOAgent(BaseAtariAgent):
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x.to(self.device)
         x = self._extract_features(x)
-        z1 = self.conv1(x)
+        z1 = self.conv1(x).to(self.device)
         a1 = self.activation(z1)
-        z2 = self.conv2(a1)
+        z2 = self.conv2(a1).to(self.device)
         a2 = self.activation(z2)
-        z3 = self.conv3(a2)
+        z3 = self.conv3(a2).to(self.device)
         a3 = self.activation(z3)
         flat = a3.view(a3.size(0), -1)
         if self._fc is None:

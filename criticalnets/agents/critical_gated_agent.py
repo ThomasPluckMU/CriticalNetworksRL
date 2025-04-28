@@ -30,13 +30,13 @@ class GatedCriticalAtariUDQN(BaseAtariAgent):
         self.activation_function = F.tanh
 
         # Define the convolutional layers with gated dynamic bias
-        self.conv1 = GatedDynamicBiasCNN(self.frame_stack, 32, kernel_size=8, stride=4)
-        self.conv2 = GatedDynamicBiasCNN(32, 64, kernel_size=4, stride=2)
-        self.conv3 = GatedDynamicBiasCNN(64, 64, kernel_size=3, stride=1)
+        self.conv1 = GatedDynamicBiasCNN(self.frame_stack, 32, kernel_size=8, stride=4).to(self.device)
+        self.conv2 = GatedDynamicBiasCNN(32, 64, kernel_size=4, stride=2).to(self.device)
+        self.conv3 = GatedDynamicBiasCNN(64, 64, kernel_size=3, stride=1).to(self.device)
 
         # Fully connected layers - will be initialized after first forward pass
         self.fc = None
-        self.head = nn.Linear(512, action_space)
+        self.head = nn.Linear(512, action_space).to(self.device)
 
         # Track activation values for regularization
         self.saved_activations = {}

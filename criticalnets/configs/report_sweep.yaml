@@ -1,13 +1,14 @@
 trainer: "SingleGameTrainer"
 game: "Pong-v5"
 device: "cuda"
-episodes: 5000
+episodes: 1000
 render: false
 debug: true
 save_dir: "logs"
 log_dir: "logs"
 parallel: true
 max_jobs: 16
+batch_size: 1
 
 agents:
   StandardAtariDQN:

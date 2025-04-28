@@ -7,6 +7,8 @@ from copy import deepcopy
 from ..agents import get_agent_class
 from ..training.logic import get_logic_class
 
+import hashlib, json
+
 
 class ConfigHandler:
     """
@@ -15,6 +17,11 @@ class ConfigHandler:
 
     def __init__(self, config_path: str):
         self.config_path = Path(config_path)
+        
+    def config_to_hex(self, config):
+        # Filter out non-serializable objects
+        config_copy = {k: v for k, v in config.items() if isinstance(v, (str, int, float, bool, list, dict, type(None)))}
+        return hashlib.md5(json.dumps(config_copy, sort_keys=True).encode()).hexdigest()[:8]
 
     def generate_configs(self) -> List[Dict[str, Any]]:
         config_list = []
@@ -97,6 +104,8 @@ class ConfigHandler:
                             # Add logic param values
                             for i, lpk in enumerate(logic_param_keys):
                                 config[lpk] = logic_combo[i]
+
+                            config['run_id'] = self.config_to_hex(config)
 
                             config_list.append(config)
 

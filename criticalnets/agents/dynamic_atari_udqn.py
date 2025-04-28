@@ -22,13 +22,13 @@ class DynamicAtariUDQN(BaseAtariAgent):
         self.batch_size = config.get("batch_size", 32)
 
         # Define the convolutional layers with gated dynamic bias
-        self.conv1 = DynamicBiasCNN(self.frame_stack, 32, kernel_size=8, stride=4)
-        self.conv2 = DynamicBiasCNN(32, 64, kernel_size=4, stride=2)
-        self.conv3 = DynamicBiasCNN(64, 64, kernel_size=3, stride=1)
+        self.conv1 = DynamicBiasCNN(self.frame_stack, 32, kernel_size=8, stride=4).to(self.device)
+        self.conv2 = DynamicBiasCNN(32, 64, kernel_size=4, stride=2).to(self.device)
+        self.conv3 = DynamicBiasCNN(64, 64, kernel_size=3, stride=1).to(self.device)
 
         # Fully connected layers - will be initialized after first forward pass
         self.fc = None
-        self.head = nn.Linear(512, action_space)
+        self.head = nn.Linear(512, action_space).to(self.device)
 
         # Initialize the output shapes for the conv layers
         self._initialize_network()
