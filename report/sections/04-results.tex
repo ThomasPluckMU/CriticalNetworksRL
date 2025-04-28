@@ -1,0 +1,96 @@
+The performance of the critical network regularizer was investigated via comparisons of DQN, PPO and A2C with and without the regulizer within the Atari BreakOut environment for the Pong game. Table 1 showcases the performance metrics for the evaluated agents with multiple test case parameters.
+
+\subsection{Performance accross various learning rates}
+
+
+\subsection{Performance across different regularizer strengths}
+
+\subsection{Regularizer performance across various models}
+
+
+\begin{table}[h]
+\centering
+\caption{Performance Comparison Across Model Variations}
+\renewcommand{\arraystretch}{1.2}
+\fbox{%
+\begin{tabular}{lllc}
+\toprule
+\textbf{Model} & \textbf{Type} & \textbf{Parameters} & \textbf{Reward (mean ± std)} \\
+\midrule
+\multicolumn{4}{l}{\textbf{DQN Agents}} \\
+\midrule
+ & Standard & $\epsilon=0.0$ & X.XX ± X.XX \\
+ & Standard & $\epsilon=0.05$ & X.XX ± X.XX \\
+ & Standard & $\epsilon=0.1$ & X.XX ± X.XX \\
+ & \textit{Critical} & $\epsilon=0.0$, $\lambda=0.0001$ & X.XX ± X.XX \\
+ & \textit{Critical} & $\epsilon=0.02$, $\lambda=0.001$ & X.XX ± X.XX \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{PPO Agents}} \\
+\midrule
+ & Standard & $\epsilon=0.0$ & X.XX ± X.XX \\
+ & Standard & $\epsilon=0.05$ & X.XX ± X.XX \\
+ & Standard & $\epsilon=0.1$ & X.XX ± X.XX \\
+ & \textit{Critical} & $\epsilon=0.0$, $\lambda=0.0001$ & X.XX ± X.XX \\
+ & \textit{Critical} & $\epsilon=0.1$, $\lambda=0.01$ & X.XX ± X.XX \\
+\midrule
+
+\multicolumn{4}{l}{\textbf{A2C Agents}} \\
+\midrule
+ & Standard & $\gamma=0.9$ & X.XX ± X.XX \\
+ & Standard & $\gamma=0.99$ & X.XX ± X.XX \\
+ & Standard & $\gamma=0.999$ & X.XX ± X.XX \\
+ & \textit{Critical} & $\gamma=0.9$, $\lambda=0.0001$ & X.XX ± X.XX \\
+ & \textit{Critical} & $\gamma=0.999$, $\lambda=0.01$ & X.XX ± X.XX \\
+\bottomrule
+\end{tabular}}
+\label{tab:variations}
+\end{table}
+
+\subsection{Training Dynamics}
+
+Analysis of the training dynamics provides insight into the agents' learning behavior. Separate learning curves were analyzed for standard and critical agents of each type:
+
+\begin{figure}[h]
+\centering
+\fbox{\rule{0pt}{1.5in}\rule{0.9\linewidth}{0pt}}
+\caption{DQN Agents Standard}
+\label{fig:dqn_standard}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\fbox{\rule{0pt}{1.5in}\rule{0.9\linewidth}{0pt}}
+\caption{DQN Agents Critical}
+\label{fig:dqn_critical}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\fbox{\rule{0pt}{1.5in}\rule{0.9\linewidth}{0pt}}
+\caption{PPO Agents Standard}
+\label{fig:ppo_standard}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\fbox{\rule{0pt}{1.5in}\rule{0.9\linewidth}{0pt}}
+\caption{PPO Agents Critical}
+\label{fig:ppo_critical}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\fbox{\rule{0pt}{1.5in}\rule{0.9\linewidth}{0pt}}
+\caption{A2C Agents Standard}
+\label{fig:a2c_standard}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\fbox{\rule{0pt}{1.5in}\rule{0.9\linewidth}{0pt}}
+\caption{A2C Agents Critical}
+\label{fig:a2c_critical}
+\end{figure}
+
+
