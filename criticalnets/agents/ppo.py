@@ -38,11 +38,13 @@ class PPOAgent(BaseAtariAgent):
 
     def _extract_features(self, x: torch.Tensor) -> torch.Tensor:
         x = x.float() / 255.0  # Simple normalization only
-        return x.squeeze(1)  # Remove extra dimension from envpool [batch,1,channels,height,width]
+        # Reshape parallel input [1,32,4,84,84] -> [32,4,84,84]
+        return x.squeeze(0)  # Remove batch dimension
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x.to(self.device)
         x = self._extract_features(x)
+            
         z1 = self.conv1(x).to(self.device)
         a1 = self.activation(z1)
         z2 = self.conv2(a1).to(self.device)

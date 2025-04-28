@@ -30,13 +30,12 @@ class PongA2CAgent(BaseAtariAgent):
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         x = x.to(self.device).float() / 255.0  # Simple normalization only
-        x = x.squeeze(1)  # Remove extra dimension from envpool [batch,1,channels,height,width]
-
+        
         # Conv backbone
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
-        x = x.view(x.size(0), -1)
+        x = x.flatten(start_dim=2).transpose(1, 2).flatten(start_dim=1, end_dim=2)
         if self.fc is None:
             self.fc = nn.Linear(x.size(1), 512).to(self.device)
         x = F.relu(self.fc(x))

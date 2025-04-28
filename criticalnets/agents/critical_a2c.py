@@ -58,9 +58,22 @@ class CriticalA2C(BaseAtariAgent):
             Tuple of (policy logits, value estimate)
         """
         x = x.to(self.device).float() / 255.0  # Simple normalization only
-        x = x.squeeze(1)  # Remove extra dimension from envpool [batch,1,channels,height,width]
-
         
+        # Handle all possible input shapes:
+        # (4,84,84) -> single frame
+        # (32,4,84,84) -> batch of frames
+        # (1,32,4,84,84) -> batched batch of frames
+        if x.dim() == 3:
+            x = x.unsqueeze(0)  # Add batch dim
+        elif x.dim() == 5:
+            x = x.squeeze(0)  # Remove outer batch dim
+        elif x.dim() != 4:
+            raise ValueError(f"Expected 3D, 4D or 5D input, got {x.dim()}D")
+            
+        # Ensure we have proper batch dimension (32,4,84,84)
+        if x.size(0) != 32:
+            x = x.repeat(32, 1, 1, 1)  # Repeat single frame to match batch size
+
         # Save input for regularization
         self.saved_inputs["input"] = x
 

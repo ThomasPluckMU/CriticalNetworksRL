@@ -11,7 +11,7 @@ class EnvPoolAtariManager:
         "Pong-v5"
     ]
 
-    def __init__(self, num_envs: int = 1):
+    def __init__(self, num_envs: int = 32):
         """Initialize the AtariManager with EnvPool support
 
         Args:
@@ -75,16 +75,22 @@ class EnvPoolAtariManager:
             # EnvPool doesn't require explicit closing
             self.env = None
 
-        # Create new environment with EnvPool
-        self.env = envpool.make(
-            self.current_game,
-            env_type="gymnasium",
-            num_envs=self.num_envs,
-            full_action_space = True,
-            episodic_life=True,
-            reward_clip=True,
-            stack_num=4,
-        )
+        try:
+            # Create new environment with EnvPool
+            self.env = envpool.make(
+                self.current_game,
+                env_type="gymnasium",
+                num_envs=self.num_envs,
+                full_action_space=True,
+                episodic_life=True,
+                reward_clip=True,
+                stack_num=4,
+            )
+                
+            return self.env
+        except Exception as e:
+            self.env = None
+            raise RuntimeError(f"Failed to create {self.current_game} environment: {str(e)}") from e
 
         return self.env
 
@@ -96,7 +102,7 @@ class EnvPoolAtariManager:
         max_actions = 0
         for game in self.working_games:  # Sample a few games to check
             try:
-                env = envpool.make("Atari", env_id=game, num_envs=1)
+                env = envpool.make("Atari", env_id=game, num_envs=self.num_envs)
                 max_actions = max(max_actions, env.action_space.n)
             except:
                 continue

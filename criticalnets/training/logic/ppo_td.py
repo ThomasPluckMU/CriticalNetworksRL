@@ -48,7 +48,7 @@ class PPOLogic(TrainingLogic):
                 logp = dist.log_prob(action).detach()
 
                 next_state, reward, terminated, truncated, _ = env.step(action.cpu().numpy())
-                done = terminated or truncated
+                done = terminated.any() or truncated.any()
 
                 states.append(st)
                 actions.append(action)

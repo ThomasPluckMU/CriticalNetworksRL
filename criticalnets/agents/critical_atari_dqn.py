@@ -55,7 +55,12 @@ class CriticalAgent(BaseAtariAgent):
             Q-values for each action
         """
         x = x.to(self.device).float() / 255.0  # Simple normalization only
-        x = x.squeeze(1)  # Remove extra dimension from envpool [batch,1,channels,height,width]
+        
+        # Handle parallel input shapes [1,32,4,84,84] or [32,4,84,84]
+        if x.dim() == 5:
+            x = x.squeeze(0)  # Remove batch dimension
+        elif x.dim() != 4:
+            raise ValueError(f"Expected 4D or 5D input, got {x.dim()}D")
         
         # Save input for regularization
         self.saved_inputs["input"] = x

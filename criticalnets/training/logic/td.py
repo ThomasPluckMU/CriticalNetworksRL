@@ -47,7 +47,7 @@ class TDLogic(TrainingLogic):
 
             # Execute action in environment (convert to int32 for envpool)
             next_state, reward, terminated, truncated, _ = env.step(action.detach().cpu().numpy().astype('int32'))
-            done = terminated or truncated
+            done = terminated.any() or truncated.any()
 
             # Store transition in replay memory
             memory.push(state, action, next_state, reward, done, "single")
