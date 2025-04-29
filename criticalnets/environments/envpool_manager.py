@@ -11,7 +11,7 @@ class EnvPoolAtariManager:
         "Pong-v5"
     ]
 
-    def __init__(self, num_envs: int = 32):
+    def __init__(self, num_envs: int = 16):
         """Initialize the AtariManager with EnvPool support
 
         Args:

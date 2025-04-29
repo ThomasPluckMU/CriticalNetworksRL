@@ -1,18 +1,21 @@
 trainer: "SingleGameTrainer"
 game: "Pong-v5"
-episodes: 2
+episodes: 500
 render: false
 debug: true
 save_dir: "logs"
 log_dir: "logs"
-device: "cuda"  # Default device for training
+device: "cuda"
+parallel: true
+max-jobs: 2
+batch_size: 1
 
 agents:
   PongA2CAgent:
     logics:
       A2CLogic:
         logic_params:
-          gamma: [0.99]
+          gamma: [0.9]
 
   CriticalA2C:
     agent_params:
@@ -20,43 +23,43 @@ agents:
     logics:
       A2CLogic:
         logic_params:
-          gamma: [0.99]
+          gamma: [0.9]
 
 
   PPOAgent:
     agent_params:
-      epsilon: [0.1]
+      epsilon: [0.05]
     logics:
       PPOLogic:
         logic_params:
-          gamma: [0.99]
+          gamma: [0.9]
 
   CriticalPPO:
     agent_params:
-      epsilon: [0.1]
+      epsilon: [0.05]
       reg_strength: [0.01]
     logics:
       PPOLogic:
         logic_params:
-          gamma: [0.99]
+          gamma: [0.9]
 
-  StandardAtariDQN:
-    logics:
-      TDLogic:
-        logic_params:
-          batch_size: [1]
-      SARSALogic:
-        logic_params:
-          batch_size: [1]
+  # StandardAtariDQN:
+  #   logics:
+  #     TDLogic:
+  #       logic_params:
+  #         batch_size: [1]
+  #     SARSALogic:
+  #       logic_params:
+  #         batch_size: [1]
 
-  CriticalAgent:
-    logics:
-      TDLogic:
-        logic_params:
-          batch_size: [1]
-      SARSALogic:
-        logic_params:
-          batch_size: [1]
+  # CriticalAgent:
+  #   logics:
+  #     TDLogic:
+  #       logic_params:
+  #         batch_size: [1]
+  #     SARSALogic:
+  #       logic_params:
+  #         batch_size: [1]
           
   # GatedAtariUDQN:
   #   logics:

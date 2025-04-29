@@ -7,7 +7,7 @@ save_dir: "logs"
 log_dir: "logs"
 device: "cuda"  # Default device for training
 parallel: true
-max_jobs: 4  # Matches available GPUs
+max_jobs: 2  # Matches available GPUs
 
 agents:
   PongA2CAgent:
